@@ -2,7 +2,7 @@ const fs = require('fs');
 const https = require('https');
 const readline = require('readline');
 
-const outputFile = '/Users/tormireinson/code/temps/all_data.csv';
+const outputFile = './all_data.csv';
 
 /**
  * Fetches data for a specific date range from the University of Tartu weather archive.
