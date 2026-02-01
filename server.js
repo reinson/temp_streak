@@ -22,6 +22,10 @@ const server = http.createServer((req, res) => {
         filePath = './heatmap.html';
     } else if (filePath === './toravere-heatmap' || filePath === './toravere-heatmap/') {
         filePath = './toravere-heatmap.html';
+    } else if (filePath === './streaks' || filePath === './streaks/') {
+        filePath = './streaks.html';
+    } else if (filePath === './toravere-streaks' || filePath === './toravere-streaks/') {
+        filePath = './toravere-streaks.html';
     } else if (filePath === './') {
         filePath = './index.html';
     }

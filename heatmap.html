@@ -53,6 +53,15 @@
             background: #eee;
             position: relative;
         }
+        .month-divider {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: rgba(60, 60, 60, 0.5); /* Dark gray */
+            pointer-events: none;
+            z-index: 1;
+        }
         .day-stripe {
             flex: 1;
             height: 100%;
@@ -118,8 +127,10 @@
             <p>
                 <a href="index.html">Tartu Graph</a> | 
                 <strong>Tartu Heatmap</strong> <a href="https://meteo.physic.ut.ee/" target="_blank">🔗</a> | 
+                <a href="streaks.html">Tartu Streaks</a> |
                 <a href="toravere.html">Tõravere Graph</a> | 
-                <a href="toravere-heatmap.html">Tõravere Heatmap</a> <a href="https://www.ilmateenistus.ee/" target="_blank">🔗</a>
+                <a href="toravere-heatmap.html">Tõravere Heatmap</a> |
+                <a href="toravere-streaks.html">Tõravere Streaks</a> <a href="https://www.ilmateenistus.ee/" target="_blank">🔗</a>
             </p>
         </div>
         
@@ -263,6 +274,20 @@
                 });
                 
                 row.appendChild(daysContainer);
+
+                // Add month dividers
+                let dayOffset = 0;
+                for (let month = 0; month < 11; month++) { // Jan to Nov
+                    const daysInMonth = new Date(year, month + 1, 0).getDate();
+                    dayOffset += daysInMonth;
+                    const percent = (dayOffset / yearsData[year].length) * 100;
+                    
+                    const divider = document.createElement('div');
+                    divider.className = 'month-divider';
+                    divider.style.left = `${percent}%`;
+                    daysContainer.appendChild(divider);
+                }
+
                 heatmap.appendChild(row);
             });
             

@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Winter Streaks Visualization</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .header {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .header h1 { font-size: 32px; color: #2c3e50; margin-bottom: 10px; }
+        .header p { color: #7f8c8d; font-size: 16px; }
+        .header a { color: #3498db; text-decoration: none; margin: 0 5px; }
+        .header a:hover { text-decoration: underline; }
+        
+        .main-layout {
+            display: flex;
+            gap: 30px;
+        }
+        
+        .visualization-area {
+            flex: 2;
+            position: relative;
+        }
+        
+        .visualization-svg {
+            width: 100%;
+            display: block;
+            background: #f0f0f0;
+        }
+        .hour-rect {
+            shape-rendering: crispEdges;
+        }
+        .hour-rect.below-zero { fill: #bdc3c7; }
+        .hour-rect.streak { fill: #3498db; }
+        
+        .month-divider {
+            stroke: rgba(60, 60, 60, 0.4);
+            stroke-width: 1.5;
+            pointer-events: none;
+        }
+        
+        .streak-marker {
+            font-size: 14px;
+            font-weight: bold;
+            fill: white;
+            pointer-events: none;
+            text-shadow: 0 0 2px rgba(0,0,0,0.5);
+        }
+
+        .year-label {
+            font-size: 13px;
+            font-weight: bold;
+            fill: #2c3e50;
+            dominant-baseline: middle;
+        }
+
+        .streaks-list-area {
+            flex: 1;
+            background: #fcfcfc;
+            padding: 20px;
+            border-left: 1px solid #eee;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .streak-card {
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            background: white;
+            border: 1px solid #eee;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .streak-num {
+            width: 24px;
+            height: 24px;
+            background: #3498db;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+        .streak-info { flex: 1; }
+        .streak-dates { font-size: 13px; font-weight: 600; color: #2c3e50; }
+        .streak-duration { font-size: 12px; color: #7f8c8d; }
+
+        .loading { text-align: center; padding: 60px; color: #7f8c8d; font-size: 18px; }
+        .tooltip {
+            position: absolute;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+            display: none;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 id="page-title">Winter Streaks</h1>
+            <p id="nav-links"></p>
+        </div>
+        
+        <div class="main-layout">
+            <div class="visualization-area">
+                <div id="heatmap-content">
+                    <div class="loading">Loading data...</div>
+                </div>
+            </div>
+            
+            <div class="streaks-list-area">
+                <h3 style="margin-bottom: 15px; color: #2c3e50;">Top 10 Longest Sub-Zero Streaks</h3>
+                <div id="streaks-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="tooltip" class="tooltip"></div>
+
+    <script>
+        const tooltip = document.getElementById('tooltip');
+        const isToravere = window.location.pathname.includes('toravere');
+        const dataFile = isToravere ? 'toravere_compacted.csv' : 'compacted_data.csv';
+        const locationName = isToravere ? 'Tõravere' : 'Tartu';
+
+        document.getElementById('page-title').textContent = `${locationName} Winter Streaks`;
+        document.getElementById('nav-links').innerHTML = `
+            <a href="index.html">Tartu Graph</a> | 
+            <a href="heatmap.html">Tartu Heatmap</a> | 
+            <a href="streaks.html">Tartu Streaks</a> |
+            <a href="toravere.html">Tõravere Graph</a> | 
+            <a href="toravere-heatmap.html">Tõravere Heatmap</a> |
+            <a href="toravere-streaks.html">Tõravere Streaks</a>
+        `;
+
+        async function parseAndAnalyze() {
+            const response = await fetch(dataFile);
+            const text = await response.text();
+            const lines = text.split('\n');
+            
+            const allData = [];
+            const streaks = [];
+            let currentStreak = null;
+
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                const parts = line.split(', ');
+                const date = new Date(parts[0]);
+                const temp = parseFloat(parts[3] || parts[1]);
+                if (isNaN(temp)) continue;
+
+                const month = date.getMonth();
+                if (month >= 4 && month <= 9) {
+                    if (currentStreak) {
+                        streaks.push(currentStreak);
+                        currentStreak = null;
+                    }
+                    continue;
+                }
+
+                const point = { date, temp };
+                allData.push(point);
+
+                if (temp <= 0) {
+                    if (!currentStreak) {
+                        currentStreak = { from: date, to: date, points: [point] };
+                    } else {
+                        currentStreak.to = date;
+                        currentStreak.points.push(point);
+                    }
+                } else {
+                    if (currentStreak) {
+                        streaks.push(currentStreak);
+                        currentStreak = null;
+                    }
+                }
+            }
+            if (currentStreak) streaks.push(currentStreak);
+
+            streaks.forEach(s => s.durationMs = s.to - s.from);
+            const top10 = streaks.sort((a, b) => b.durationMs - a.durationMs).slice(0, 10);
+            top10.forEach((s, i) => s.rank = i + 1);
+
+            const winters = {};
+            allData.forEach(p => {
+                const year = p.date.getFullYear();
+                const month = p.date.getMonth();
+                const winterKey = (month <= 3) ? `${year-1}/${year}` : `${year}/${year+1}`;
+                if (!winters[winterKey]) winters[winterKey] = [];
+                winters[winterKey].push(p);
+            });
+
+            return { winters, top10 };
+        }
+
+        function formatDuration(ms) {
+            const days = Math.floor(ms / (24 * 60 * 60 * 1000));
+            const hours = Math.floor((ms % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+            return `${days}d ${hours}h`;
+        }
+
+        function render(data) {
+            const { winters, top10 } = data;
+            const container = document.getElementById('heatmap-content');
+            const listContainer = document.getElementById('streaks-list');
+            container.innerHTML = '';
+            listContainer.innerHTML = '';
+
+            top10.forEach(s => {
+                const card = document.createElement('div');
+                card.className = 'streak-card';
+                card.innerHTML = `
+                    <div class="streak-num">${s.rank}</div>
+                    <div class="streak-info">
+                        <div class="streak-dates">${s.from.toLocaleDateString()} - ${s.to.toLocaleDateString()}</div>
+                        <div class="streak-duration">${formatDuration(s.durationMs)} | Avg: ${(s.points.reduce((a,b)=>a+b.temp,0)/s.points.length).toFixed(1)}°C</div>
+                    </div>
+                `;
+                listContainer.appendChild(card);
+            });
+
+            const sortedWinterKeys = Object.keys(winters).sort();
+            const rowHeight = 35;
+            const rowGap = 4;
+            const labelWidth = 100;
+            const chartWidth = 1200;
+            const totalWidth = labelWidth + chartWidth;
+            const totalHeight = sortedWinterKeys.length * (rowHeight + rowGap) + 40;
+
+            const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            svg.setAttribute("class", "visualization-svg");
+            svg.setAttribute("viewBox", `0 0 ${totalWidth} ${totalHeight}`);
+            container.appendChild(svg);
+
+            const templateStart = new Date(2021, 10, 1, 0, 0, 0);
+            const templateEnd = new Date(2022, 3, 30, 23, 59, 59);
+            const templateDuration = templateEnd - templateStart;
+
+            // 1. Draw winter rows (Background)
+            sortedWinterKeys.forEach((key, rowIndex) => {
+                const y = rowIndex * (rowHeight + rowGap);
+                
+                const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                label.setAttribute("x", 5);
+                label.setAttribute("y", y + rowHeight / 2);
+                label.setAttribute("class", "year-label");
+                label.textContent = key;
+                svg.appendChild(label);
+
+                winters[key].forEach(point => {
+                    if (point.temp <= 0) {
+                        const pMonth = point.date.getMonth();
+                        const pDay = point.date.getDate();
+                        const pHour = point.date.getHours();
+                        
+                        let normalizedDate;
+                        if (pMonth >= 10) normalizedDate = new Date(2021, pMonth, pDay, pHour, 0, 0);
+                        else normalizedDate = new Date(2022, pMonth, pDay, pHour, 0, 0);
+
+                        const x = labelWidth + ((normalizedDate - templateStart) / templateDuration) * chartWidth;
+                        const width = (3600000 / templateDuration) * chartWidth;
+                        
+                        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                        rect.setAttribute("x", x);
+                        rect.setAttribute("y", y);
+                        rect.setAttribute("width", width + 0.2);
+                        rect.setAttribute("height", rowHeight);
+                        
+                        const streak = top10.find(s => point.date >= s.from && point.date <= s.to);
+                        rect.setAttribute("class", "hour-rect " + (streak ? "streak" : "below-zero"));
+                        
+                        rect.onmouseover = (e) => {
+                            tooltip.style.display = 'block';
+                            tooltip.textContent = `${point.date.toLocaleString()}: ${point.temp.toFixed(1)}°C`;
+                            tooltip.style.left = (e.pageX + 10) + 'px';
+                            tooltip.style.top = (e.pageY + 10) + 'px';
+                        };
+                        rect.onmouseout = () => tooltip.style.display = 'none';
+                        svg.appendChild(rect);
+                    }
+                });
+            });
+
+            // 2. Draw month gridlines (Middle layer)
+            const dividerMonths = [
+                { m: 11, y: 2021, label: 'Dec' }, { m: 0, y: 2022, label: 'Jan' }, 
+                { m: 1, y: 2022, label: 'Feb' }, { m: 2, y: 2022, label: 'Mar' }, { m: 3, y: 2022, label: 'Apr' }
+            ];
+
+            dividerMonths.forEach(dm => {
+                const dividerDate = new Date(dm.y, dm.m, 1, 0, 0, 0);
+                const x = labelWidth + ((dividerDate - templateStart) / templateDuration) * chartWidth;
+                
+                const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                line.setAttribute("x1", x);
+                line.setAttribute("y1", 0);
+                line.setAttribute("x2", x);
+                line.setAttribute("y2", sortedWinterKeys.length * (rowHeight + rowGap));
+                line.setAttribute("class", "month-divider");
+                svg.appendChild(line);
+
+                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                text.setAttribute("x", x + 5);
+                text.setAttribute("y", sortedWinterKeys.length * (rowHeight + rowGap) + 20);
+                text.setAttribute("style", "font-size: 12px; fill: #7f8c8d;");
+                text.textContent = dm.label;
+                svg.appendChild(text);
+            });
+
+            const novLabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            novLabel.setAttribute("x", labelWidth + 5);
+            novLabel.setAttribute("y", sortedWinterKeys.length * (rowHeight + rowGap) + 20);
+            novLabel.setAttribute("style", "font-size: 12px; fill: #7f8c8d;");
+            novLabel.textContent = "Nov";
+            svg.appendChild(novLabel);
+
+            // 3. Draw streak markers (Foreground)
+            sortedWinterKeys.forEach((key, rowIndex) => {
+                const y = rowIndex * (rowHeight + rowGap);
+                winters[key].forEach(point => {
+                    const streak = top10.find(s => point.date >= s.from && point.date <= s.to);
+                    if (streak && (point.date.getTime() === streak.from.getTime() || 
+                       (point.date > streak.from && point.date.getTime() === winters[key][0].date.getTime()))) {
+                        
+                        const pMonth = point.date.getMonth();
+                        const pDay = point.date.getDate();
+                        const pHour = point.date.getHours();
+                        let normalizedDate;
+                        if (pMonth >= 10) normalizedDate = new Date(2021, pMonth, pDay, pHour, 0, 0);
+                        else normalizedDate = new Date(2022, pMonth, pDay, pHour, 0, 0);
+                        const x = labelWidth + ((normalizedDate - templateStart) / templateDuration) * chartWidth;
+
+                        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                        text.setAttribute("x", x + 4);
+                        text.setAttribute("y", y + 18);
+                        text.setAttribute("class", "streak-marker");
+                        text.textContent = streak.rank;
+                        svg.appendChild(text);
+                    }
+                });
+            });
+        }
+
+        parseAndAnalyze().then(render).catch(err => {
+            console.error(err);
+            document.getElementById('heatmap-content').innerHTML = '<div class="loading">Error loading data.</div>';
+        });
+    </script>
+</body>
+</html>
