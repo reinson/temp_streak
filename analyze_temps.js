@@ -38,11 +38,14 @@ async function findLongestStreaks(filePath, threshold, mode = 'below') {
             continue;
         }
 
-        const [dateStr, tempStr] = line.split(', ');
-        if (!dateStr || !tempStr) continue;
+        const parts = line.split(', ');
+        if (parts.length < 2) continue;
 
+        const dateStr = parts[0];
         const date = new Date(dateStr);
-        const temp = parseFloat(tempStr);
+        // If there are 4 columns (compacted format), use the 4th column (HourTemp)
+        // Otherwise use the 2nd column
+        const temp = parseFloat(parts[3] || parts[1]);
 
         // Check for data gaps (more than 1 day)
         if (currentStreak && (date - currentStreak.end > 24 * 60 * 60 * 1000)) {

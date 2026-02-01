@@ -67,6 +67,15 @@
             padding: 0;
             border-radius: 0;
             border: none;
+            transition: all 0.3s ease-in-out;
+            position: relative;
+        }
+
+        .chart-container.expanded {
+            margin-top: 20px;
+            margin-bottom: 25px;
+            z-index: 10;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
 
         .chart-container:last-child {
@@ -77,6 +86,47 @@
             width: 100%;
             height: 120px;
             display: block;
+            transition: height 0.3s ease-in-out;
+            overflow: visible;
+        }
+
+        .chart-container.expanded .chart-svg {
+            height: 400px;
+        }
+
+        .hover-line {
+            stroke: #2c3e50;
+            stroke-width: 1;
+            stroke-dasharray: 4,4;
+            pointer-events: none;
+            display: none;
+        }
+
+        .tooltip-bg {
+            fill: rgba(44, 62, 80, 0.9);
+            rx: 4;
+            display: none;
+            pointer-events: none;
+        }
+
+        .tooltip-text {
+            fill: white;
+            font-size: 12px;
+            font-weight: 600;
+            display: none;
+            pointer-events: none;
+        }
+
+        .y-axis-label {
+            font-size: 10px;
+            fill: #95a5a6;
+            text-anchor: end;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        .chart-container.expanded .y-axis-label {
+            opacity: 1;
         }
 
         .chart-label {
@@ -137,7 +187,12 @@
     <div class="container">
         <div class="header">
             <h1>Temperature Data Visualization</h1>
-            <p>Yearly temperature trends over time | <a href="/compact">Compact View</a></p>
+            <p>Yearly temperature trends over time | 
+                <strong>Tartu Graph</strong> <a href="https://meteo.physic.ut.ee/" target="_blank" style="margin-left: 2px; font-size: 12px;">🔗</a> | 
+                <a href="/heatmap">Tartu Heatmap</a> |
+                <a href="/toravere">Tõravere Graph</a> |
+                <a href="/toravere-heatmap">Tõravere Heatmap</a> <a href="https://www.ilmateenistus.ee/" target="_blank" style="margin-left: 2px; font-size: 12px;">🔗</a>
+            </p>
         </div>
         <div id="charts-container">
             <div class="loading">Loading data...</div>
@@ -164,10 +219,10 @@
                 if (lineNum > 0) { // Skip header
                     const line = text.substring(lineStart, lineEnd).trim();
                     if (line) {
-                        const commaIdx = line.indexOf(', ');
-                        if (commaIdx > 0) {
-                            const dateStr = line.substring(0, commaIdx);
-                            const temp = parseFloat(line.substring(commaIdx + 2));
+                        const parts = line.split(', ');
+                        if (parts.length >= 2) {
+                            const dateStr = parts[0];
+                            const temp = parseFloat(parts[3] || parts[1]); // Use HourTemp (index 3) if available, else index 1
                             
                             if (!isNaN(temp)) {
                                 const date = new Date(dateStr);
@@ -245,11 +300,13 @@
             // Use fixed viewBox width for consistent scaling, SVG will scale to 100% width
             const width = 1600; // Fixed viewBox width
             const height = 120;
-            const padding = { top: 25, right: 10, bottom: 20, left: 10 }; // Top padding for labels, minimal side padding
+            const expandedHeight = 400;
+            const padding = { top: 25, right: 10, bottom: 20, left: 35 }; // More left padding for Y axis
             const chartWidth = width - padding.left - padding.right;
             const chartHeight = height - padding.top - padding.bottom;
+            const expandedChartHeight = expandedHeight - padding.top - padding.bottom;
 
-            // Downsample data for rendering (keep all for stats)
+            // Downsample data for rendering (keep all for stats and hover)
             const displayData = downsample(data, 3000);
             
             // Calculate stats using all data (iterative to avoid stack overflow)
@@ -263,6 +320,10 @@
                 if (temp > maxYearTemp) maxYearTemp = temp;
             }
             const avgTemp = sum / data.length;
+
+            // Create container
+            const container = document.createElement('div');
+            container.className = 'chart-container';
 
             // Create SVG (responsive width)
             const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -290,117 +351,32 @@
                 const dayOfYear = (date - yearStart) / yearDuration;
                 return Math.max(0, Math.min(chartWidth, dayOfYear * chartWidth));
             };
-            const yScale = (temp) => chartHeight - ((temp - fixedMinTemp) / (fixedMaxTemp - fixedMinTemp)) * chartHeight;
+            const getYScale = (h) => (temp) => h - ((temp - fixedMinTemp) / (fixedMaxTemp - fixedMinTemp)) * h;
+            let yScale = getYScale(chartHeight);
 
-            // Split data into segments above and below zero
-            function createPathSegments(data) {
-                const segments = [];
-                let currentSegment = null;
-                
-                for (let i = 0; i < data.length; i++) {
-                    const point = data[i];
-                    const isAboveZero = point.temp > 0;
-                    const x = xScale(point.date);
-                    const y = yScale(point.temp);
-                    
-                    if (currentSegment === null) {
-                        // Start first segment
-                        currentSegment = {
-                            isAboveZero: isAboveZero,
-                            pathData: `M ${x} ${y}`
-                        };
-                    } else if (currentSegment.isAboveZero !== isAboveZero) {
-                        // Crossing zero - calculate intersection point
-                        const prevPoint = data[i - 1];
-                        const prevX = xScale(prevPoint.date);
-                        const prevY = yScale(prevPoint.temp);
-                        
-                        // Linear interpolation to find zero crossing
-                        const t = -prevPoint.temp / (point.temp - prevPoint.temp);
-                        const zeroX = prevX + (x - prevX) * t;
-                        const zeroY = yScale(0);
-                        
-                        // Close current segment at zero
-                        currentSegment.pathData += ` L ${zeroX} ${zeroY}`;
-                        segments.push(currentSegment);
-                        
-                        // Start new segment from zero
-                        currentSegment = {
-                            isAboveZero: isAboveZero,
-                            pathData: `M ${zeroX} ${zeroY} L ${x} ${y}`
-                        };
-                    } else {
-                        // Continue current segment
-                        currentSegment.pathData += ` L ${x} ${y}`;
-                    }
-                }
-                
-                if (currentSegment !== null) {
-                    segments.push(currentSegment);
-                }
-                
-                return segments;
-            }
-            
-            // Create month tick marks with labels
-            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            function createMonthTicks() {
-                const ticks = [];
-                for (let month = 0; month < 12; month++) {
-                    const monthDate = new Date(year, month, 1);
-                    const x = xScale(monthDate);
-                    ticks.push({ x, month });
-                }
-                return ticks;
-            }
-            
-            // Draw streak rectangles (before the line so they appear behind)
+            // Draw streaks for closed state
             topStreaks.forEach(streak => {
-                // Check if streak overlaps with this year
-                const yearStart = new Date(year, 0, 1);
-                const yearEnd = new Date(year, 11, 31, 23, 59, 59);
-                
-                // Check if streak overlaps with this year
-                if (streak.to >= yearStart && streak.from <= yearEnd) {
-                    // Calculate the start and end x positions
-                    const streakStart = Math.max(streak.from, yearStart);
-                    const streakEnd = Math.min(streak.to, yearEnd);
-                    
-                    // Calculate duration in this year
-                    const durationInThisYear = streakEnd - streakStart;
-                    
-                    // Calculate total streak duration
-                    const totalDuration = streak.to - streak.from;
-                    
-                    // Calculate duration in the other year (if streak spans years)
-                    const durationInOtherYear = totalDuration - durationInThisYear;
-                    
-                    // Only show label if this year's portion is longer (or equal)
-                    const showLabel = durationInThisYear >= durationInOtherYear;
-                    
+                const streakYearStart = new Date(year, 0, 1);
+                const streakYearEnd = new Date(year, 11, 31, 23, 59, 59);
+                if (streak.to >= streakYearStart && streak.from <= streakYearEnd) {
+                    const streakStart = Math.max(streak.from, streakYearStart);
+                    const streakEnd = Math.min(streak.to, streakYearEnd);
                     const x1 = xScale(streakStart);
                     const x2 = xScale(streakEnd);
-                    const rectWidth = Math.max(1, x2 - x1);
-                    
-                    // Draw rectangle covering full height
                     const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
                     rect.setAttribute('x', x1);
                     rect.setAttribute('y', 0);
-                    rect.setAttribute('width', rectWidth);
+                    rect.setAttribute('width', Math.max(1, x2 - x1));
                     rect.setAttribute('height', chartHeight);
                     rect.setAttribute('class', 'streak-rect');
                     g.appendChild(rect);
                     
-                    // Add label with streak number and duration (only if this year's portion is longer)
-                    if (showLabel) {
-                        const labelX = x1 + rectWidth / 2;
-                        const labelY = 8; // Position near top of rectangle
-                        
+                    if (streakEnd - streakStart >= (streak.to - streak.from) / 2) {
                         const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                        label.setAttribute('x', labelX);
-                        label.setAttribute('y', labelY);
+                        label.setAttribute('x', x1 + (x2 - x1) / 2);
+                        label.setAttribute('y', 8);
                         label.setAttribute('class', 'streak-label');
-                        label.setAttribute('dominant-baseline', 'hanging'); // Align to top
+                        label.setAttribute('dominant-baseline', 'hanging');
                         label.textContent = `#${streak.num}: ${streak.duration}`;
                         g.appendChild(label);
                     }
@@ -408,9 +384,101 @@
             });
 
             // Create path segments
-            const segments = createPathSegments(displayData);
+            function createPathSegments(data, h) {
+                const segments = [];
+                let currentSegment = null;
+                const ys = getYScale(h);
+                
+                for (let i = 0; i < data.length; i++) {
+                    const point = data[i];
+                    const isAboveZero = point.temp > 0;
+                    const x = xScale(point.date);
+                    const y = ys(point.temp);
+                    
+                    if (currentSegment === null) {
+                        currentSegment = { isAboveZero, pathData: `M ${x} ${y}` };
+                    } else if (currentSegment.isAboveZero !== isAboveZero) {
+                        const prevPoint = data[i - 1];
+                        const prevX = xScale(prevPoint.date);
+                        const prevY = ys(prevPoint.temp);
+                        const t = -prevPoint.temp / (point.temp - prevPoint.temp);
+                        const zeroX = prevX + (x - prevX) * t;
+                        const zeroY = ys(0);
+                        currentSegment.pathData += ` L ${zeroX} ${zeroY}`;
+                        segments.push(currentSegment);
+                        currentSegment = { isAboveZero, pathData: `M ${zeroX} ${zeroY} L ${x} ${y}` };
+                    } else {
+                        currentSegment.pathData += ` L ${x} ${y}`;
+                    }
+                }
+                if (currentSegment !== null) segments.push(currentSegment);
+                return segments;
+            }
             
-            // Render each segment with appropriate color
+            // Create month ticks
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            function drawMonthTicks(h) {
+                const monthTicksGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                monthTicksGroup.setAttribute('class', 'month-ticks-group');
+                for (let month = 0; month < 12; month++) {
+                    const monthDate = new Date(year, month, 1);
+                    const x = xScale(monthDate);
+                    
+                    const tick = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    tick.setAttribute('x1', x);
+                    tick.setAttribute('y1', h);
+                    tick.setAttribute('x2', x);
+                    tick.setAttribute('y2', h + 4);
+                    tick.setAttribute('class', 'axis');
+                    monthTicksGroup.appendChild(tick);
+                    
+                    const monthLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    monthLabel.setAttribute('x', x + 4);
+                    monthLabel.setAttribute('y', h + 4);
+                    monthLabel.setAttribute('class', 'month-label');
+                    monthLabel.setAttribute('dominant-baseline', 'middle');
+                    monthLabel.textContent = monthNames[month];
+                    monthTicksGroup.appendChild(monthLabel);
+                }
+                return monthTicksGroup;
+            }
+
+            // Draw Y-axis ticks
+            function drawYAxis(h) {
+                const yAxisGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                yAxisGroup.setAttribute('class', 'y-axis-group');
+                const ys = getYScale(h);
+                for (let t = -30; t <= 35; t += 10) {
+                    const y = ys(t);
+                        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    label.setAttribute('x', -5);
+                    label.setAttribute('y', y);
+                    label.setAttribute('class', 'y-axis-label');
+                    label.setAttribute('dominant-baseline', 'middle');
+                    label.textContent = `${t}°`;
+                    yAxisGroup.appendChild(label);
+                }
+                return yAxisGroup;
+            }
+
+            // Draw zero line
+            function drawZeroLine(h) {
+                const ys = getYScale(h);
+                const zeroY = ys(0);
+                const zeroLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                zeroLine.setAttribute('x1', 0);
+                zeroLine.setAttribute('y1', zeroY);
+                zeroLine.setAttribute('x2', chartWidth);
+                zeroLine.setAttribute('y2', zeroY);
+                zeroLine.setAttribute('class', 'axis zero-line');
+                zeroLine.setAttribute('stroke-width', '1.5');
+                zeroLine.setAttribute('stroke-dasharray', '4,4');
+                zeroLine.setAttribute('opacity', '0.7');
+                return zeroLine;
+            }
+
+            // Initial render
+            const segments = createPathSegments(displayData, chartHeight);
             segments.forEach(segment => {
                 const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                 path.setAttribute('d', segment.pathData);
@@ -418,46 +486,30 @@
                 g.appendChild(path);
             });
 
-            // Add zero line (freezing point) - full width, more prominent
-            const zeroY = yScale(0);
-            if (zeroY >= 0 && zeroY <= chartHeight) {
-                const zeroLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                zeroLine.setAttribute('x1', 0);
-                zeroLine.setAttribute('y1', zeroY);
-                zeroLine.setAttribute('x2', chartWidth);
-                zeroLine.setAttribute('y2', zeroY);
-                zeroLine.setAttribute('class', 'axis');
-                zeroLine.setAttribute('stroke-width', '1.5');
-                zeroLine.setAttribute('stroke-dasharray', '4,4');
-                zeroLine.setAttribute('opacity', '0.7');
-                g.appendChild(zeroLine);
-            }
-            
-            // Add month tick marks and labels
-            const monthTicks = createMonthTicks();
-            monthTicks.forEach(({ x, month }) => {
-                const tick = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                tick.setAttribute('x1', x);
-                tick.setAttribute('y1', chartHeight);
-                tick.setAttribute('x2', x);
-                tick.setAttribute('y2', chartHeight + 4);
-                tick.setAttribute('class', 'axis');
-                tick.setAttribute('stroke-width', '1');
-                g.appendChild(tick);
-                
-                // Add month label next to the tick
-                const monthLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                monthLabel.setAttribute('x', x + 4); // Small offset to the right of the tick
-                monthLabel.setAttribute('y', chartHeight + 4); // Align with bottom of tick
-                monthLabel.setAttribute('class', 'month-label');
-                monthLabel.setAttribute('dominant-baseline', 'middle');
-                monthLabel.textContent = monthNames[month];
-                g.appendChild(monthLabel);
-            });
+            g.appendChild(drawZeroLine(chartHeight));
+            g.appendChild(drawMonthTicks(chartHeight));
+            g.appendChild(drawYAxis(chartHeight));
+
+            // Hover elements
+            const hoverLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            hoverLine.setAttribute('class', 'hover-line');
+            hoverLine.setAttribute('y1', 0);
+            hoverLine.setAttribute('y2', chartHeight);
+            g.appendChild(hoverLine);
+
+            const tooltipBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            tooltipBg.setAttribute('class', 'tooltip-bg');
+            tooltipBg.setAttribute('height', 24);
+            g.appendChild(tooltipBg);
+
+            const tooltipText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            tooltipText.setAttribute('class', 'tooltip-text');
+            tooltipText.setAttribute('dominant-baseline', 'middle');
+            g.appendChild(tooltipText);
 
             svg.appendChild(g);
 
-            // Add year label above the chart (on the left)
+            // Add static labels
             const yearLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
             yearLabel.setAttribute('x', padding.left);
             yearLabel.setAttribute('y', 15);
@@ -466,7 +518,6 @@
             yearLabel.textContent = year;
             svg.appendChild(yearLabel);
             
-            // Add stats above the chart (on the right)
             const statsText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
             statsText.setAttribute('x', width - padding.right);
             statsText.setAttribute('y', 15);
@@ -476,11 +527,169 @@
             statsText.textContent = `Avg: ${avgTemp.toFixed(1)}°C | Min: ${minYearTemp.toFixed(1)}°C | Max: ${maxYearTemp.toFixed(1)}°C`;
             svg.appendChild(statsText);
 
-            // Create container
-            const container = document.createElement('div');
-            container.className = 'chart-container';
+            // Hover interaction
+            container.addEventListener('mouseenter', () => {
+                container.classList.add('expanded');
+                svg.setAttribute('viewBox', `0 0 ${width} ${expandedHeight}`);
+                
+                // Update elements for expanded state
+                const newYS = getYScale(expandedChartHeight);
+                g.innerHTML = ''; // Clear and redraw
+                
+                // Re-draw streaks (drawn first to be in background)
+                topStreaks.forEach(streak => {
+                    const yearStart = new Date(year, 0, 1);
+                    const yearEnd = new Date(year, 11, 31, 23, 59, 59);
+                    if (streak.to >= yearStart && streak.from <= yearEnd) {
+                        const streakStart = Math.max(streak.from, yearStart);
+                        const streakEnd = Math.min(streak.to, yearEnd);
+                        const x1 = xScale(streakStart);
+                        const x2 = xScale(streakEnd);
+                        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                        rect.setAttribute('x', x1);
+                        rect.setAttribute('y', 0);
+                        rect.setAttribute('width', Math.max(1, x2 - x1));
+                        rect.setAttribute('height', expandedChartHeight);
+                        rect.setAttribute('class', 'streak-rect');
+                        g.appendChild(rect);
+                        
+                        if (streakEnd - streakStart >= (streak.to - streak.from) / 2) {
+                            const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                            label.setAttribute('x', x1 + (x2 - x1) / 2);
+                            label.setAttribute('y', 8);
+                            label.setAttribute('class', 'streak-label');
+                            label.setAttribute('dominant-baseline', 'hanging');
+                            label.textContent = `#${streak.num}: ${streak.duration}`;
+                            g.appendChild(label);
+                        }
+                    }
+                });
+
+                const expandedSegments = createPathSegments(displayData, expandedChartHeight);
+                expandedSegments.forEach(segment => {
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    path.setAttribute('d', segment.pathData);
+                    path.setAttribute('class', `line ${segment.isAboveZero ? 'line-above-zero' : 'line-below-zero'}`);
+                    g.appendChild(path);
+                });
+
+                g.appendChild(drawZeroLine(expandedChartHeight));
+                g.appendChild(drawMonthTicks(expandedChartHeight));
+                g.appendChild(drawYAxis(expandedChartHeight));
+                
+                // Re-add hover elements
+                hoverLine.setAttribute('y2', expandedChartHeight);
+                g.appendChild(hoverLine);
+                g.appendChild(tooltipBg);
+                g.appendChild(tooltipText);
+            });
+
+            container.addEventListener('mouseleave', () => {
+                container.classList.remove('expanded');
+                svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+                hoverLine.style.display = 'none';
+                tooltipBg.style.display = 'none';
+                tooltipText.style.display = 'none';
+
+                // Reset elements for small state
+                g.innerHTML = '';
+                
+                // Re-draw streaks for closed state
+                topStreaks.forEach(streak => {
+                    const yearStart = new Date(year, 0, 1);
+                    const yearEnd = new Date(year, 11, 31, 23, 59, 59);
+                    if (streak.to >= yearStart && streak.from <= yearEnd) {
+                        const streakStart = Math.max(streak.from, yearStart);
+                        const streakEnd = Math.min(streak.to, yearEnd);
+                        const x1 = xScale(streakStart);
+                        const x2 = xScale(streakEnd);
+                        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                        rect.setAttribute('x', x1);
+                        rect.setAttribute('y', 0);
+                        rect.setAttribute('width', Math.max(1, x2 - x1));
+                        rect.setAttribute('height', chartHeight);
+                        rect.setAttribute('class', 'streak-rect');
+                        g.appendChild(rect);
+                        
+                        if (streakEnd - streakStart >= (streak.to - streak.from) / 2) {
+                            const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                            label.setAttribute('x', x1 + (x2 - x1) / 2);
+                            label.setAttribute('y', 8);
+                            label.setAttribute('class', 'streak-label');
+                            label.setAttribute('dominant-baseline', 'hanging');
+                            label.textContent = `#${streak.num}: ${streak.duration}`;
+                            g.appendChild(label);
+                        }
+                    }
+                });
+
+                const smallSegments = createPathSegments(displayData, chartHeight);
+                smallSegments.forEach(segment => {
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    path.setAttribute('d', segment.pathData);
+                    path.setAttribute('class', `line ${segment.isAboveZero ? 'line-above-zero' : 'line-below-zero'}`);
+                    g.appendChild(path);
+                });
+                g.appendChild(drawZeroLine(chartHeight));
+                g.appendChild(drawMonthTicks(chartHeight));
+                g.appendChild(drawYAxis(chartHeight));
+                hoverLine.setAttribute('y2', chartHeight);
+                g.appendChild(hoverLine);
+                g.appendChild(tooltipBg);
+                g.appendChild(tooltipText);
+            });
+
+            container.addEventListener('mousemove', (e) => {
+                const rect = svg.getBoundingClientRect();
+                const x = (e.clientX - rect.left) * (width / rect.width);
+                const chartX = x - padding.left;
+
+                if (chartX >= 0 && chartX <= chartWidth) {
+                    hoverLine.style.display = 'block';
+                    hoverLine.setAttribute('x1', chartX);
+                    hoverLine.setAttribute('x2', chartX);
+
+                    // Find closest data point
+                    const targetDate = new Date(yearStart.getTime() + (chartX / chartWidth) * yearDuration);
+                    
+                    // Binary search for closest point
+                    let left = 0, right = data.length - 1;
+                    while (left < right) {
+                        let mid = Math.floor((left + right) / 2);
+                        if (data[mid].date < targetDate) left = mid + 1;
+                        else right = mid;
+                    }
+                    const point = data[left];
+
+                    if (point) {
+                        const timeStr = point.date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        const dateStr = point.date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+                        const text = `${dateStr} ${timeStr}: ${point.temp.toFixed(1)}°C`;
+                        tooltipText.textContent = text;
+                        tooltipText.style.display = 'block';
+                        
+                        const textWidth = tooltipText.getComputedTextLength();
+                        tooltipBg.setAttribute('width', textWidth + 10);
+                        tooltipBg.style.display = 'block';
+
+                        let tooltipX = chartX + 10;
+                        if (tooltipX + textWidth + 10 > chartWidth) tooltipX = chartX - textWidth - 20;
+                        
+                        const fixedY = 5; // Fixed height near the top of the chart area
+                        
+                        tooltipBg.setAttribute('x', tooltipX);
+                        tooltipBg.setAttribute('y', fixedY);
+                        tooltipText.setAttribute('x', tooltipX + 5);
+                        tooltipText.setAttribute('y', fixedY + 12); // Vertically centered in the 24px background
+                    }
+                } else {
+                    hoverLine.style.display = 'none';
+                    tooltipBg.style.display = 'none';
+                    tooltipText.style.display = 'none';
+                }
+            });
+
             container.appendChild(svg);
-            
             return container;
         }
 
@@ -490,7 +699,7 @@
                 document.getElementById('charts-container').innerHTML = 
                     '<div class="loading">Loading data (this may take a moment for large files)...</div>';
                 
-                const response = await fetch('./all_data.csv');
+                const response = await fetch('./compacted_data.csv');
                 const text = await response.text();
                 
                 document.getElementById('charts-container').innerHTML = 

@@ -15,9 +15,13 @@ const mimeTypes = {
 const server = http.createServer((req, res) => {
     let filePath = '.' + req.url;
     
-    // Handle /compact route
-    if (filePath === './compact' || filePath === './compact/') {
-        filePath = './compact.html';
+    // Handle routes
+    if (filePath === './toravere' || filePath === './toravere/') {
+        filePath = './toravere.html';
+    } else if (filePath === './heatmap' || filePath === './heatmap/') {
+        filePath = './heatmap.html';
+    } else if (filePath === './toravere-heatmap' || filePath === './toravere-heatmap/') {
+        filePath = './toravere-heatmap.html';
     } else if (filePath === './') {
         filePath = './index.html';
     }
