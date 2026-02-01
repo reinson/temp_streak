@@ -77,6 +77,8 @@
             padding: 20px;
             border-left: 1px solid #eee;
             border-radius: 0 8px 8px 0;
+            display: flex;
+            flex-direction: column;
         }
 
         .streak-card {
@@ -119,6 +121,30 @@
             display: none;
             z-index: 100;
         }
+
+        .legend {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: auto;
+            padding: 20px 0 0 0;
+            border-top: 1px solid #eee;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            color: #2c3e50;
+        }
+        .legend-box {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+        .legend-box.below-zero { background-color: #bdc3c7; }
+        .legend-box.streak { background-color: #3498db; }
     </style>
 </head>
 <body>
@@ -138,6 +164,17 @@
             <div class="streaks-list-area">
                 <h3 style="margin-bottom: 15px; color: #2c3e50;">Top 10 Longest Sub-Zero Streaks</h3>
                 <div id="streaks-list"></div>
+                
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-box below-zero"></div>
+                        <span>Sub-zero temperatures</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-box streak"></div>
+                        <span>Part of Top 10 longest streaks</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
