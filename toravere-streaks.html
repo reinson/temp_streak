@@ -79,12 +79,32 @@
             display: block;
             background: #f0f0f0;
         }
+        .row-hover-bg {
+            transition: fill 0.2s;
+            pointer-events: all;
+        }
+        .row-hover-bg:hover {
+            fill: rgba(52, 152, 219, 0.1);
+        }
         .hour-rect {
             shape-rendering: crispEdges;
         }
-        .hour-rect.below-zero { fill: #bdc3c7; }
-        .hour-rect.streak { fill: #3498db; }
-        .hour-rect.current-streak { fill: #9b59b6; }
+        .hour-rect.below-zero { fill: #bdc3c7; } /* Less than 1 day */
+        .hour-rect.medium { fill: #5dade2; } /* More than 1 day */
+        .hour-rect.long { fill: #2e86c1; } /* More than 7 days */
+        .hour-rect.current-streak { fill: #2ecc71; } /* Current streak */
+        
+        .hour-rect.streak {
+            /* No animation */
+        }
+
+        /* No purple-pulse keyframes needed */
+
+        .hour-rect.current-streak {
+            fill: #2ecc71;
+            stroke: #27ae60;
+            stroke-width: 1;
+        }
         
         .month-divider {
             stroke: rgba(60, 60, 60, 0.4);
@@ -100,6 +120,16 @@
             text-shadow: 0 0 2px rgba(0,0,0,0.5);
         }
 
+        .year-row {
+            display: flex;
+            align-items: center;
+            height: 26px;
+            margin-bottom: 3px;
+            transition: background-color 0.2s;
+        }
+        .year-row:hover {
+            background-color: rgba(52, 152, 219, 0.1);
+        }
         .year-label {
             font-size: 13px;
             font-weight: bold;
@@ -219,12 +249,20 @@
                 
                 <div class="legend">
                     <div class="legend-item">
-                        <div class="legend-box below-zero"></div>
-                        <span id="legend-threshold-label">Temperatures ≤ 0°C</span>
+                        <div class="legend-box long" style="background: #2e86c1;"></div>
+                        <span>> 7 days</span>
                     </div>
                     <div class="legend-item">
-                        <div class="legend-box streak"></div>
-                        <span>Part of Top 10 longest streaks</span>
+                        <div class="legend-box medium" style="background: #5dade2;"></div>
+                        <span>> 1 day</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-box below-zero" style="background: #bdc3c7;"></div>
+                        <span>< 1 day</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-box streak" style="background: #2e86c1; border: 1px solid #ccc;"></div>
+                        <span>Top 10 streaks</span>
                     </div>
                 </div>
             </div>
@@ -365,8 +403,16 @@
                 const isOngoing = s.isOngoing;
                 const card = document.createElement('div');
                 card.className = 'streak-card';
+                
+                // Determine color based on duration for the circle
+                const durationDays = s.durationMs / (24 * 60 * 60 * 1000);
+                let circleColor = '#bdc3c7';
+                if (isOngoing) circleColor = '#2ecc71'; // Green for current streak
+                else if (durationDays > 7) circleColor = '#2e86c1';
+                else if (durationDays > 1) circleColor = '#5dade2';
+
                 card.innerHTML = `
-                    <div class="streak-num ${isOngoing ? 'current' : ''}">${i + 1}</div>
+                    <div class="streak-num" style="background: ${circleColor}; color: white;">${i + 1}</div>
                     <div class="streak-info">
                         <div class="streak-dates">
                             ${s.from.toLocaleDateString()} - ${s.to.toLocaleDateString()}
@@ -389,9 +435,9 @@
 
                 const card = document.createElement('div');
                 card.className = 'streak-card';
-                card.style.border = '1px solid #9b59b6';
+                card.style.border = '1px solid #2ecc71';
                 card.innerHTML = `
-                    <div class="streak-num current"></div>
+                    <div class="streak-num" style="background: #2ecc71; color: white;"></div>
                     <div class="streak-info">
                         <div class="streak-dates">
                             ${s.from.toLocaleDateString()} - ${s.to.toLocaleDateString()}
@@ -425,6 +471,16 @@
             sortedWinterKeys.forEach((key, rowIndex) => {
                 const y = rowIndex * (rowHeight + rowGap);
                 
+                // Add a transparent row background for easier hovering
+                const rowBg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                rowBg.setAttribute("x", 0);
+                rowBg.setAttribute("y", y);
+                rowBg.setAttribute("width", totalWidth);
+                rowBg.setAttribute("height", rowHeight);
+                rowBg.setAttribute("fill", "transparent");
+                rowBg.setAttribute("class", "row-hover-bg");
+                svg.appendChild(rowBg);
+
                 const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
                 label.setAttribute("x", 5);
                 label.setAttribute("y", y + rowHeight / 2);
@@ -449,40 +505,102 @@
                     const x1 = labelWidth + ((normFrom - templateStart) / templateDuration) * chartWidth;
                     const x2 = labelWidth + ((normTo - templateStart) / templateDuration) * chartWidth;
                     const width = Math.max(1, x2 - x1);
-                    
-                    const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                        
+                        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
                     rect.setAttribute("x", x1);
-                    rect.setAttribute("y", y);
+                        rect.setAttribute("y", y);
                     rect.setAttribute("width", width);
-                    rect.setAttribute("height", rowHeight);
-                    
+                        rect.setAttribute("height", rowHeight);
+                        
+                        let rectClass = "hour-rect ";
+                    const durationDays = (to - from) / (24 * 60 * 60 * 1000);
+                    if (durationDays > 7) rectClass += "long";
+                    else if (durationDays > 1) rectClass += "medium";
+                        else rectClass += "below-zero";
+
                     const isTop10 = top10.find(s => from >= s.from && to <= s.to);
                     const isCurrent = data.currentStreak && from >= data.currentStreak.from && to <= data.currentStreak.to;
                     
-                    let rectClass = "hour-rect ";
-                    if (isCurrent) rectClass += "current-streak";
-                    else if (isTop10) rectClass += "streak";
-                    else rectClass += "below-zero";
-                    
-                    rect.setAttribute("class", rectClass);
-                    
+                    if (isCurrent) {
+                        rectClass += " current-streak";
+                    } else if (isTop10) {
+                        rectClass += " streak";
+                    }
+                        
+                        rect.setAttribute("class", rectClass);
+                        
                     rect.onmouseover = (e) => {
                         tooltip.style.display = 'block';
-                        tooltip.textContent = `${from.toLocaleDateString()} - ${to.toLocaleDateString()}`;
+                        const durationMs = to - from;
+                        const days = Math.floor(durationMs / (24 * 60 * 60 * 1000));
+                        const hours = Math.floor((durationMs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+                        tooltip.textContent = `${days}d ${hours}h`;
                         tooltip.style.left = (e.pageX + 10) + 'px';
                         tooltip.style.top = (e.pageY + 10) + 'px';
                     };
-                    rect.onmouseout = () => tooltip.style.display = 'none';
-                    svg.appendChild(rect);
+                        rect.onmouseout = () => tooltip.style.display = 'none';
+                        svg.appendChild(rect);
+                });
+            });
 
-                    // Add rank number if it's top 10
+            // 1.5 Draw streak markers (Foreground - rendered after all rectangles)
+            sortedWinterKeys.forEach((key, rowIndex) => {
+                const y = rowIndex * (rowHeight + rowGap);
+                const winterIntervals = winters[key];
+                
+                // Count top 10 streaks in this year for staggered alignment
+                const top10InYear = winterIntervals.filter(interval => 
+                    top10.find(s => interval.from >= s.from && interval.to <= s.to)
+                );
+
+                winterIntervals.forEach((interval) => {
+                    const { from, to } = interval;
+                    const isTop10 = top10.find(s => from >= s.from && to <= s.to);
+                    
                     if (isTop10) {
                         const rank = top10.indexOf(isTop10) + 1;
                         const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                        text.setAttribute("x", x1 + 4);
-                        text.setAttribute("y", y + 17);
+                        
+                        const normalize = (d) => {
+                            const m = d.getMonth();
+                            const day = d.getDate();
+                            const h = d.getHours();
+                            return (m >= 10) ? new Date(2021, m, day, h, 0, 0) : new Date(2022, m, day, h, 0, 0);
+                        };
+
+                        const normFrom = normalize(from);
+                        const normTo = normalize(to);
+                        const x1 = labelWidth + ((normFrom - templateStart) / templateDuration) * chartWidth;
+                        const x2 = labelWidth + ((normTo - templateStart) / templateDuration) * chartWidth;
+                        const width = Math.max(1, x2 - x1);
+                        const durationDays = (to - from) / (24 * 60 * 60 * 1000);
+                        
+                        // Center if shorter than 2 days, otherwise left-aligned
+                        if (durationDays < 2) {
+                            text.setAttribute("x", x1 + width / 2);
+                            text.setAttribute("text-anchor", "middle");
+                        } else {
+                            text.setAttribute("x", x1 + 4);
+                            text.setAttribute("text-anchor", "start");
+                        }
+
+                        // Staggered Y alignment for threshold -21 and below if multiple streaks exist
+                        let yOffset = 17; // Default middle-ish
+                        if (currentThreshold <= -21 && top10InYear.length > 1) {
+                            const streakIdx = top10InYear.indexOf(interval);
+                            yOffset = (streakIdx % 2 === 0) ? 12 : 22; // Even: higher, Odd: lower
+                        }
+
+                        text.setAttribute("y", y + yOffset);
                         text.setAttribute("class", "streak-marker");
-                        text.setAttribute("style", "font-size: 11px;");
+                        
+                        // Dark gray if shorter than 1 day, otherwise white
+                        if (durationDays < 1) {
+                            text.setAttribute("style", "font-size: 11px; fill: #2c3e50; text-shadow: none; pointer-events: none;");
+                        } else {
+                            text.setAttribute("style", "font-size: 11px; pointer-events: none;");
+                        }
+                        
                         text.textContent = rank;
                         svg.appendChild(text);
                     }
@@ -530,7 +648,6 @@
         function updateVisualization() {
             currentThreshold = parseInt(thresholdSlider.value);
             thresholdDisplay.textContent = `${currentThreshold}°C`;
-            document.getElementById('legend-threshold-label').textContent = `Temperatures ≤ ${currentThreshold}°C`;
             const analyzedData = analyzeData(currentThreshold);
             render(analyzedData);
         }
