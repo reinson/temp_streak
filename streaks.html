@@ -21,13 +21,48 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
         .header {
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             text-align: center;
         }
         .header h1 { font-size: 32px; color: #2c3e50; margin-bottom: 10px; }
         .header p { color: #7f8c8d; font-size: 16px; }
         .header a { color: #3498db; text-decoration: none; margin: 0 5px; }
         .header a:hover { text-decoration: underline; }
+
+        .controls {
+            background: #fcfcfc;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #eee;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .slider-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .slider-container label {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 14px;
+        }
+        input[type=range] {
+            width: 100%;
+            cursor: pointer;
+        }
+        .temp-display {
+            font-size: 16px;
+            font-weight: bold;
+            color: #3498db;
+        }
         
         .main-layout {
             display: flex;
@@ -49,6 +84,7 @@
         }
         .hour-rect.below-zero { fill: #bdc3c7; }
         .hour-rect.streak { fill: #3498db; }
+        .hour-rect.current-streak { fill: #9b59b6; }
         
         .month-divider {
             stroke: rgba(60, 60, 60, 0.4);
@@ -105,6 +141,9 @@
             font-size: 12px;
             flex-shrink: 0;
         }
+        .streak-num.current {
+            background: #9b59b6;
+        }
         .streak-info { flex: 1; }
         .streak-dates { font-size: 13px; font-weight: 600; color: #2c3e50; }
         .streak-duration { font-size: 12px; color: #7f8c8d; }
@@ -153,7 +192,7 @@
             <h1 id="page-title">Winter Streaks</h1>
             <p id="nav-links"></p>
         </div>
-        
+
         <div class="main-layout">
             <div class="visualization-area">
                 <div id="heatmap-content">
@@ -162,7 +201,17 @@
             </div>
             
             <div class="streaks-list-area">
-                <h3 style="margin-bottom: 15px; color: #2c3e50;">Top 10 Longest Sub-Zero Streaks</h3>
+                <div class="controls">
+                    <div class="slider-container">
+                        <div class="slider-header">
+                            <label for="temp-threshold">Temperature Threshold:</label>
+                            <span class="temp-display" id="temp-display">0°C</span>
+                        </div>
+                        <input type="range" id="temp-threshold" min="-25" max="0" value="0" step="1">
+                    </div>
+                </div>
+
+                <h3 style="margin-bottom: 15px; color: #2c3e50; font-size: 16px;">Top 10 Longest Streaks</h3>
                 <div id="streaks-list"></div>
                 
                 <div class="legend">
@@ -183,29 +232,36 @@
 
     <script>
         const tooltip = document.getElementById('tooltip');
+        const thresholdSlider = document.getElementById('temp-threshold');
+        const thresholdDisplay = document.getElementById('temp-display');
         const isToravere = window.location.pathname.includes('toravere');
         const dataFile = isToravere ? 'toravere_compacted.csv' : 'compacted_data.csv';
         const locationName = isToravere ? 'Tõravere' : 'Tartu';
 
+        let cachedRawData = [];
+        let currentThreshold = 0;
+
         document.getElementById('page-title').textContent = `${locationName} Winter Streaks`;
         document.getElementById('nav-links').innerHTML = `
-            <a href="index.html">Tartu Graph</a> | 
-            <a href="heatmap.html">Tartu Heatmap</a> | 
-            <a href="streaks.html">Tartu Streaks</a> |
-            <a href="toravere.html">Tõravere Graph</a> | 
-            <a href="toravere-heatmap.html">Tõravere Heatmap</a> |
-            <a href="toravere-streaks.html">Tõravere Streaks</a>
+            <div style="margin-bottom: 10px;">
+                <strong>Dataset:</strong>
+                <a href="${isToravere ? 'streaks.html' : 'streaks.html'}" style="${!isToravere ? 'font-weight: bold; text-decoration: underline;' : ''}">Tartu</a> | 
+                <a href="${isToravere ? 'toravere-streaks.html' : 'toravere-streaks.html'}" style="${isToravere ? 'font-weight: bold; text-decoration: underline;' : ''}">Tõravere</a>
+            </div>
+            <div>
+                <strong>View:</strong>
+                <a href="${isToravere ? 'toravere.html' : 'index.html'}">Graph</a> | 
+                <a href="${isToravere ? 'toravere-heatmap.html' : 'heatmap.html'}">Heatmap</a> | 
+                <a href="${isToravere ? 'toravere-streaks.html' : 'streaks.html'}" style="font-weight: bold; text-decoration: underline;">Streaks</a>
+            </div>
         `;
 
-        async function parseAndAnalyze() {
-            const response = await fetch(dataFile);
+        async function loadData() {
+            const response = await fetch(dataFile + '?t=' + new Date().getTime());
             const text = await response.text();
             const lines = text.split('\n');
             
-            const allData = [];
-            const streaks = [];
-            let currentStreak = null;
-
+            cachedRawData = [];
             for (let i = 1; i < lines.length; i++) {
                 const line = lines[i].trim();
                 if (!line) continue;
@@ -213,8 +269,20 @@
                 const date = new Date(parts[0]);
                 const temp = parseFloat(parts[3] || parts[1]);
                 if (isNaN(temp)) continue;
+                cachedRawData.push({ date, temp });
+            }
+        }
 
+        function analyzeData(threshold) {
+            const allData = [];
+            const streaks = [];
+            let currentStreak = null;
+
+            for (const point of cachedRawData) {
+                const { date, temp } = point;
                 const month = date.getMonth();
+                
+                // Only consider winter months (Oct-Apr)
                 if (month >= 4 && month <= 9) {
                     if (currentStreak) {
                         streaks.push(currentStreak);
@@ -223,10 +291,9 @@
                     continue;
                 }
 
-                const point = { date, temp };
                 allData.push(point);
 
-                if (temp <= 0) {
+                if (temp <= threshold) {
                     if (!currentStreak) {
                         currentStreak = { from: date, to: date, points: [point] };
                     } else {
@@ -243,6 +310,14 @@
             if (currentStreak) streaks.push(currentStreak);
 
             streaks.forEach(s => s.durationMs = s.to - s.from);
+            
+            // Find the current ongoing streak (if it ends at the last data point)
+            const lastPoint = cachedRawData[cachedRawData.length - 1];
+            const currentOngoingStreak = streaks.find(s => s.to.getTime() === lastPoint.date.getTime());
+            if (currentOngoingStreak) {
+                currentOngoingStreak.isCurrent = true;
+            }
+
             const top10 = streaks.sort((a, b) => b.durationMs - a.durationMs).slice(0, 10);
             top10.forEach((s, i) => s.rank = i + 1);
 
@@ -255,7 +330,7 @@
                 winters[winterKey].push(p);
             });
 
-            return { winters, top10 };
+            return { winters, top10, currentStreak: currentOngoingStreak };
         }
 
         function formatDuration(ms) {
@@ -271,11 +346,26 @@
             container.innerHTML = '';
             listContainer.innerHTML = '';
 
+            // Get all streaks to find the current one if it's not in top 10
+            const currentStreak = Object.values(winters).flat().reduce((found, p) => {
+                if (found) return found;
+                // This is a bit inefficient but works for finding the streak object
+                return null; 
+            }, null);
+            
+            // Re-identify current streak from top10 or find it if missing
+            let currentStreakObj = top10.find(s => s.isCurrent);
+            
+            // If not in top 10, we need to find it in the full list
+            if (!currentStreakObj) {
+                // We'll pass it through data in analyzeData instead
+            }
+
             top10.forEach(s => {
                 const card = document.createElement('div');
                 card.className = 'streak-card';
                 card.innerHTML = `
-                    <div class="streak-num">${s.rank}</div>
+                    <div class="streak-num ${s.isCurrent ? 'current' : ''}">${s.rank}</div>
                     <div class="streak-info">
                         <div class="streak-dates">${s.from.toLocaleDateString()} - ${s.to.toLocaleDateString()}</div>
                         <div class="streak-duration">${formatDuration(s.durationMs)} | Avg: ${(s.points.reduce((a,b)=>a+b.temp,0)/s.points.length).toFixed(1)}°C</div>
@@ -284,9 +374,30 @@
                 listContainer.appendChild(card);
             });
 
+            // Add current streak if not in top 10
+            if (data.currentStreak && !top10.find(s => s === data.currentStreak)) {
+                const s = data.currentStreak;
+                const separator = document.createElement('div');
+                separator.style.margin = '15px 0 10px 0';
+                separator.style.borderTop = '1px dashed #ccc';
+                listContainer.appendChild(separator);
+
+                const card = document.createElement('div');
+                card.className = 'streak-card';
+                card.style.border = '1px solid #9b59b6';
+                card.innerHTML = `
+                    <div class="streak-num current"></div>
+                    <div class="streak-info">
+                        <div class="streak-dates">${s.from.toLocaleDateString()} - ${s.to.toLocaleDateString()} (Current)</div>
+                        <div class="streak-duration">${formatDuration(s.durationMs)} | Avg: ${(s.points.reduce((a,b)=>a+b.temp,0)/s.points.length).toFixed(1)}°C</div>
+                    </div>
+                `;
+                listContainer.appendChild(card);
+            }
+
             const sortedWinterKeys = Object.keys(winters).sort();
-            const rowHeight = 35;
-            const rowGap = 4;
+            const rowHeight = 26;
+            const rowGap = 3;
             const labelWidth = 100;
             const chartWidth = 1200;
             const totalWidth = labelWidth + chartWidth;
@@ -298,7 +409,7 @@
             container.appendChild(svg);
 
             const templateStart = new Date(2021, 10, 1, 0, 0, 0);
-            const templateEnd = new Date(2022, 3, 30, 23, 59, 59);
+            const templateEnd = new Date(2022, 4, 15, 23, 59, 59);
             const templateDuration = templateEnd - templateStart;
 
             // 1. Draw winter rows (Background)
@@ -313,7 +424,7 @@
                 svg.appendChild(label);
 
                 winters[key].forEach(point => {
-                    if (point.temp <= 0) {
+                    if (point.temp <= currentThreshold) {
                         const pMonth = point.date.getMonth();
                         const pDay = point.date.getDate();
                         const pHour = point.date.getHours();
@@ -322,6 +433,9 @@
                         if (pMonth >= 10) normalizedDate = new Date(2021, pMonth, pDay, pHour, 0, 0);
                         else normalizedDate = new Date(2022, pMonth, pDay, pHour, 0, 0);
 
+                        // If the date is after April in the normalized year, we need to cap it or handle it
+                        // but since we are in Feb/Mar, it should be fine.
+                        
                         const x = labelWidth + ((normalizedDate - templateStart) / templateDuration) * chartWidth;
                         const width = (3600000 / templateDuration) * chartWidth;
                         
@@ -332,7 +446,14 @@
                         rect.setAttribute("height", rowHeight);
                         
                         const streak = top10.find(s => point.date >= s.from && point.date <= s.to);
-                        rect.setAttribute("class", "hour-rect " + (streak ? "streak" : "below-zero"));
+                        const isCurrent = data.currentStreak && point.date >= data.currentStreak.from && point.date <= data.currentStreak.to;
+                        
+                        let rectClass = "hour-rect ";
+                        if (isCurrent) rectClass += "current-streak";
+                        else if (streak) rectClass += "streak";
+                        else rectClass += "below-zero";
+                        
+                        rect.setAttribute("class", rectClass);
                         
                         rect.onmouseover = (e) => {
                             tooltip.style.display = 'block';
@@ -349,7 +470,8 @@
             // 2. Draw month gridlines (Middle layer)
             const dividerMonths = [
                 { m: 11, y: 2021, label: 'Dec' }, { m: 0, y: 2022, label: 'Jan' }, 
-                { m: 1, y: 2022, label: 'Feb' }, { m: 2, y: 2022, label: 'Mar' }, { m: 3, y: 2022, label: 'Apr' }
+                { m: 1, y: 2022, label: 'Feb' }, { m: 2, y: 2022, label: 'Mar' }, 
+                { m: 3, y: 2022, label: 'Apr' }, { m: 4, y: 2022, label: 'May' }
             ];
 
             dividerMonths.forEach(dm => {
@@ -384,8 +506,13 @@
                 const y = rowIndex * (rowHeight + rowGap);
                 winters[key].forEach(point => {
                     const streak = top10.find(s => point.date >= s.from && point.date <= s.to);
-                    if (streak && (point.date.getTime() === streak.from.getTime() || 
-                       (point.date > streak.from && point.date.getTime() === winters[key][0].date.getTime()))) {
+                    const currentStreakObj = data.currentStreak;
+                    const isPointInCurrent = currentStreakObj && point.date >= currentStreakObj.from && point.date <= currentStreakObj.to;
+                    
+                    const activeStreak = streak || (isPointInCurrent ? currentStreakObj : null);
+                    
+                    if (activeStreak && (point.date.getTime() === activeStreak.from.getTime() || 
+                       (point.date > activeStreak.from && point.date.getTime() === winters[key][0].date.getTime()))) {
                         
                         const pMonth = point.date.getMonth();
                         const pDay = point.date.getDate();
@@ -397,16 +524,28 @@
 
                         const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
                         text.setAttribute("x", x + 4);
-                        text.setAttribute("y", y + 18);
+                        text.setAttribute("y", y + 17);
                         text.setAttribute("class", "streak-marker");
-                        text.textContent = streak.rank;
+                        text.setAttribute("style", "font-size: 11px;");
+                        text.textContent = streak ? streak.rank : "";
                         svg.appendChild(text);
                     }
                 });
             });
         }
 
-        parseAndAnalyze().then(render).catch(err => {
+        function updateVisualization() {
+            currentThreshold = parseInt(thresholdSlider.value);
+            thresholdDisplay.textContent = `${currentThreshold}°C`;
+            const analyzedData = analyzeData(currentThreshold);
+            render(analyzedData);
+        }
+
+        thresholdSlider.oninput = updateVisualization;
+
+        loadData().then(() => {
+            updateVisualization();
+        }).catch(err => {
             console.error(err);
             document.getElementById('heatmap-content').innerHTML = '<div class="loading">Error loading data.</div>';
         });

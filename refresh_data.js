@@ -3,6 +3,133 @@ const https = require('https');
 const readline = require('readline');
 
 const outputFile = './all_data.csv';
+const compactedFile = './compacted_data.csv';
+
+/**
+ * Formats a Date object to YYYY-MM-DD HH:mm:ss
+ */
+function formatDate(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
+/**
+ * Compacts data from all_data.csv to compacted_data.csv
+ */
+async function compactData() {
+    if (!fs.existsSync(outputFile)) {
+        console.error(`Input file not found: ${outputFile}`);
+        return;
+    }
+
+    console.log(`Compacting data to ${compactedFile}...`);
+
+    const fileStream = fs.createReadStream(outputFile);
+    const rl = readline.createInterface({
+        input: fileStream,
+        crlfDelay: Infinity
+    });
+
+    const outputStream = fs.createWriteStream(compactedFile, { flags: 'w' });
+    outputStream.on('error', (err) => console.error('STREAM ERROR:', err));
+    outputStream.write('Aeg, MinTemp, MaxTemp, HourTemp\n');
+
+    let currentHourMarkDate = null;
+    let minTemp = Infinity;
+    let maxTemp = -Infinity;
+    let lastTemp = null;
+    let isFirstLine = true;
+    let rowsProcessed = 0;
+    let hoursWritten = 0;
+
+    for await (const line of rl) {
+        if (isFirstLine) {
+            isFirstLine = false;
+            continue;
+        }
+
+        const parts = line.split(',');
+        if (parts.length < 2) continue;
+        
+        const dateStr = parts[0].trim();
+        const tempStr = parts[1].trim();
+        
+        if (!dateStr || !tempStr) continue;
+
+        // Use a more robust date parsing for "YYYY-MM-DD HH:mm:ss"
+        let date;
+        if (dateStr.includes(' ')) {
+            const [d, t] = dateStr.split(' ');
+            const [year, month, day] = d.split('-').map(Number);
+            const [hour, min, sec] = t.split(':').map(Number);
+            // Construct as local time
+            date = new Date(year, month - 1, day, hour, min, sec);
+        } else {
+            date = new Date(dateStr);
+        }
+
+        if (isNaN(date.getTime())) continue;
+        const temp = parseFloat(tempStr);
+        if (isNaN(temp)) continue;
+
+        let targetHourMarkDate = new Date(date);
+        if (targetHourMarkDate.getMinutes() !== 0 || targetHourMarkDate.getSeconds() !== 0) {
+            targetHourMarkDate.setHours(targetHourMarkDate.getHours() + 1);
+        }
+        targetHourMarkDate.setMinutes(0, 0, 0);
+
+        if (currentHourMarkDate === null) {
+            currentHourMarkDate = targetHourMarkDate;
+            minTemp = temp;
+            maxTemp = temp;
+            lastTemp = temp;
+            rowsProcessed++;
+            continue;
+        }
+
+        if (targetHourMarkDate.getTime() > currentHourMarkDate.getTime()) {
+            // We've moved past the current hour mark. 
+            // Write the completed hour's data.
+            outputStream.write(`${formatDate(currentHourMarkDate)}, ${minTemp.toFixed(1)}, ${maxTemp.toFixed(1)}, ${lastTemp.toFixed(1)}\n`);
+            hoursWritten++;
+
+            // If there's a gap of more than one hour, we just move to the next available hour mark.
+            currentHourMarkDate = targetHourMarkDate;
+            minTemp = temp;
+            maxTemp = temp;
+            lastTemp = temp;
+        } else {
+            // Still in the same hour window
+            minTemp = Math.min(minTemp, temp);
+            maxTemp = Math.max(maxTemp, temp);
+            lastTemp = temp;
+        }
+
+        rowsProcessed++;
+        if (rowsProcessed % 100000 === 0) {
+            process.stdout.write(`    Processed ${rowsProcessed} rows...\r`);
+        }
+    }
+
+    if (currentHourMarkDate !== null) {
+        outputStream.write(`${formatDate(currentHourMarkDate)}, ${minTemp.toFixed(1)}, ${maxTemp.toFixed(1)}, ${lastTemp.toFixed(1)}\n`);
+        hoursWritten++;
+    }
+
+    await new Promise((resolve) => {
+        outputStream.end(() => {
+            console.log('  Stream closed.');
+            resolve();
+        });
+    });
+
+    console.log(`  Finished compaction! Processed ${rowsProcessed} rows, written ${hoursWritten} hourly records.`);
+}
 
 /**
  * Fetches data for a specific date range from the University of Tartu weather archive.
@@ -110,6 +237,7 @@ async function refreshData() {
     }
 
     console.log("Refresh complete.");
+    await compactData();
 }
 
 refreshData();

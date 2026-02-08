@@ -187,14 +187,7 @@
     <div class="container">
         <div class="header">
             <h1>Temperature Data Visualization</h1>
-            <p>Yearly temperature trends over time | 
-                <strong>Tartu Graph</strong> <a href="https://meteo.physic.ut.ee/" target="_blank" style="margin-left: 2px; font-size: 12px;">🔗</a> | 
-                <a href="heatmap.html">Tartu Heatmap</a> |
-                <a href="streaks.html">Tartu Streaks</a> |
-                <a href="toravere.html">Tõravere Graph</a> |
-                <a href="toravere-heatmap.html">Tõravere Heatmap</a> |
-                <a href="toravere-streaks.html">Tõravere Streaks</a> <a href="https://www.ilmateenistus.ee/" target="_blank" style="margin-left: 2px; font-size: 12px;">🔗</a>
-            </p>
+            <p id="nav-links"></p>
         </div>
         <div id="charts-container">
             <div class="loading">Loading data...</div>
@@ -202,6 +195,24 @@
     </div>
 
     <script>
+        const isToravere = window.location.pathname.includes('toravere');
+        const dataFile = isToravere ? 'toravere_compacted.csv' : 'compacted_data.csv';
+        const locationName = isToravere ? 'Tõravere' : 'Tartu';
+
+        document.getElementById('nav-links').innerHTML = `
+            <div style="margin-bottom: 10px;">
+                <strong>Dataset:</strong>
+                <a href="${isToravere ? 'index.html' : 'index.html'}" style="${!isToravere ? 'font-weight: bold; text-decoration: underline;' : ''}">Tartu</a> | 
+                <a href="${isToravere ? 'toravere.html' : 'toravere.html'}" style="${isToravere ? 'font-weight: bold; text-decoration: underline;' : ''}">Tõravere</a>
+            </div>
+            <div>
+                <strong>View:</strong>
+                <a href="${isToravere ? 'toravere.html' : 'index.html'}" style="font-weight: bold; text-decoration: underline;">Graph</a> | 
+                <a href="${isToravere ? 'toravere-heatmap.html' : 'heatmap.html'}">Heatmap</a> | 
+                <a href="${isToravere ? 'toravere-streaks.html' : 'streaks.html'}">Streaks</a>
+            </div>
+        `;
+
         // Parse CSV data in chunks to avoid stack overflow
         async function parseCSV(text) {
             const years = {};
@@ -701,7 +712,7 @@
                 document.getElementById('charts-container').innerHTML = 
                     '<div class="loading">Loading data (this may take a moment for large files)...</div>';
                 
-                const response = await fetch('./compacted_data.csv');
+                const response = await fetch('./' + dataFile);
                 const text = await response.text();
                 
                 document.getElementById('charts-container').innerHTML = 

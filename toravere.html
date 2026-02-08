@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tõravere Temperature Data Visualization</title>
+    <title>Temperature Data Visualization</title>
     <style>
         * {
             margin: 0;
@@ -186,14 +186,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Tõravere Temperature Data Visualization</h1>
-            <p>Yearly temperature trends over time | 
-                <a href="index.html">Tartu Graph</a> |
-                <a href="heatmap.html">Tartu Heatmap</a> <a href="https://meteo.physic.ut.ee/" target="_blank" style="margin-left: 2px; font-size: 12px;">🔗</a> | 
-                <strong>Tõravere Graph</strong> |
-                <a href="toravere-heatmap.html">Tõravere Heatmap</a> |
-                <a href="toravere-streaks.html">Tõravere Streaks</a> <a href="https://www.ilmateenistus.ee/" target="_blank" style="margin-left: 2px; font-size: 12px;">🔗</a>
-            </p>
+            <h1>Temperature Data Visualization</h1>
+            <p id="nav-links"></p>
         </div>
         <div id="charts-container">
             <div class="loading">Loading data...</div>
@@ -201,15 +195,29 @@
     </div>
 
     <script>
-        // Parse CSV data and calculate streaks
+        const isToravere = window.location.pathname.includes('toravere');
+        const dataFile = isToravere ? 'toravere_compacted.csv' : 'compacted_data.csv';
+        const locationName = isToravere ? 'Tõravere' : 'Tartu';
+
+        document.getElementById('nav-links').innerHTML = `
+            <div style="margin-bottom: 10px;">
+                <strong>Dataset:</strong>
+                <a href="${isToravere ? 'index.html' : 'index.html'}" style="${!isToravere ? 'font-weight: bold; text-decoration: underline;' : ''}">Tartu</a> | 
+                <a href="${isToravere ? 'toravere.html' : 'toravere.html'}" style="${isToravere ? 'font-weight: bold; text-decoration: underline;' : ''}">Tõravere</a>
+            </div>
+            <div>
+                <strong>View:</strong>
+                <a href="${isToravere ? 'toravere.html' : 'index.html'}" style="font-weight: bold; text-decoration: underline;">Graph</a> | 
+                <a href="${isToravere ? 'toravere-heatmap.html' : 'heatmap.html'}">Heatmap</a> | 
+                <a href="${isToravere ? 'toravere-streaks.html' : 'streaks.html'}">Streaks</a>
+            </div>
+        `;
+
+        // Parse CSV data in chunks to avoid stack overflow
         async function parseCSV(text) {
             const years = {};
             let minTemp = Infinity;
             let maxTemp = -Infinity;
-            
-            // Streak calculation variables
-            const streaks = [];
-            let currentStreak = null;
             
             // Process line by line without splitting entire file
             let currentPos = 0;
@@ -227,7 +235,7 @@
                         const parts = line.split(', ');
                         if (parts.length >= 2) {
                             const dateStr = parts[0];
-                            const temp = parseFloat(parts[3] || parts[1]);
+                            const temp = parseFloat(parts[3] || parts[1]); // Use HourTemp (index 3) if available, else index 1
                             
                             if (!isNaN(temp)) {
                                 const date = new Date(dateStr);
@@ -244,21 +252,6 @@
                                 
                                 if (temp < minTemp) minTemp = temp;
                                 if (temp > maxTemp) maxTemp = temp;
-
-                                // Sub-zero streak calculation
-                                if (temp <= 0) {
-                                    if (!currentStreak) {
-                                        currentStreak = { from: date, to: date };
-                                    } else {
-                                        currentStreak.to = date;
-                                    }
-                                } else {
-                                    if (currentStreak) {
-                                        currentStreak.durationMs = currentStreak.to - currentStreak.from;
-                                        streaks.push(currentStreak);
-                                        currentStreak = null;
-                                    }
-                                }
                             }
                         }
                     }
@@ -274,44 +267,27 @@
                 }
             }
             
-            // Handle last streak if file ends during one
-            if (currentStreak) {
-                currentStreak.durationMs = currentStreak.to - currentStreak.from;
-                streaks.push(currentStreak);
-            }
-
-            // Get top 10 streaks
-            const topStreaks = streaks
-                .sort((a, b) => b.durationMs - a.durationMs)
-                .slice(0, 10)
-                .map((s, i) => {
-                    const days = Math.floor(s.durationMs / (24 * 60 * 60 * 1000));
-                    const hours = Math.floor((s.durationMs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
-                    const mins = Math.floor((s.durationMs % (60 * 60 * 1000)) / (60 * 1000));
-                    
-                    let durationStr = "";
-                    if (days > 0) durationStr += `${days}d `;
-                    if (hours > 0) durationStr += `${hours}h `;
-                    if (mins > 0) durationStr += `${mins}m`;
-                    
-                    return {
-                        num: i + 1,
-                        from: s.from,
-                        to: s.to,
-                        duration: durationStr.trim() || "0m"
-                    };
-                });
-            
             // Sort each year's data by date
             Object.keys(years).forEach(year => {
                 years[year].sort((a, b) => a.date - b.date);
             });
             
-            return { years, minTemp, maxTemp, topStreaks };
+            return { years, minTemp, maxTemp };
         }
 
-        // Variable to hold streaks for visualization
-        let currentTopStreaks = [];
+        // Define the top 10 longest streaks below 0°C
+        const topStreaks = [
+            { num: 1, from: new Date('2009-12-29T01:10:00'), to: new Date('2010-02-23T14:20:00'), duration: '56d 13h 10m' },
+            { num: 2, from: new Date('2006-01-30T16:15:00'), to: new Date('2006-03-14T11:25:00'), duration: '42d 19h 10m' },
+            { num: 3, from: new Date('2012-01-13T11:15:00'), to: new Date('2012-02-20T04:05:00'), duration: '37d 16h 50m' },
+            { num: 4, from: new Date('2025-12-29T07:35:00'), to: new Date('2026-02-01T00:00:00'), duration: '33d 13h 39m (ONGOING)' },
+            { num: 5, from: new Date('2005-02-12T13:25:00'), to: new Date('2005-03-17T14:25:00'), duration: '33d 1h' },
+            { num: 6, from: new Date('2010-12-07T03:35:00'), to: new Date('2011-01-07T20:05:00'), duration: '31d 16h 30m' },
+            { num: 7, from: new Date('2022-11-17T17:30:00'), to: new Date('2022-12-18T22:35:00'), duration: '31d 5h 5m' },
+            { num: 8, from: new Date('2015-12-26T15:20:00'), to: new Date('2016-01-26T09:30:00'), duration: '30d 18h 10m' },
+            { num: 9, from: new Date('2014-01-12T00:10:00'), to: new Date('2014-02-07T09:35:00'), duration: '26d 9h 25m' },
+            { num: 10, from: new Date('2013-01-05T05:05:00'), to: new Date('2013-01-30T13:45:00'), duration: '25d 8h 40m' }
+        ];
 
         // Downsample data to reduce points (for smoother rendering)
         function downsample(data, maxPoints = 3000) {
@@ -391,8 +367,8 @@
             const getYScale = (h) => (temp) => h - ((temp - fixedMinTemp) / (fixedMaxTemp - fixedMinTemp)) * h;
             let yScale = getYScale(chartHeight);
 
-            // Draw streaks for closed state (drawn first to be in the background)
-            currentTopStreaks.forEach(streak => {
+            // Draw streaks for closed state
+            topStreaks.forEach(streak => {
                 const streakYearStart = new Date(year, 0, 1);
                 const streakYearEnd = new Date(year, 11, 31, 23, 59, 59);
                 if (streak.to >= streakYearStart && streak.from <= streakYearEnd) {
@@ -408,7 +384,7 @@
                     rect.setAttribute('class', 'streak-rect');
                     g.appendChild(rect);
                     
-                    if (streakEnd - streakStart >= 100) { // threshold for label
+                    if (streakEnd - streakStart >= (streak.to - streak.from) / 2) {
                         const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                         label.setAttribute('x', x1 + (x2 - x1) / 2);
                         label.setAttribute('y', 8);
@@ -574,7 +550,7 @@
                 g.innerHTML = ''; // Clear and redraw
                 
                 // Re-draw streaks (drawn first to be in background)
-                currentTopStreaks.forEach(streak => {
+                topStreaks.forEach(streak => {
                     const yearStart = new Date(year, 0, 1);
                     const yearEnd = new Date(year, 11, 31, 23, 59, 59);
                     if (streak.to >= yearStart && streak.from <= yearEnd) {
@@ -590,7 +566,7 @@
                         rect.setAttribute('class', 'streak-rect');
                         g.appendChild(rect);
                         
-                        if (streakEnd - streakStart >= 100) { // arbitrary threshold for label
+                        if (streakEnd - streakStart >= (streak.to - streak.from) / 2) {
                             const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                             label.setAttribute('x', x1 + (x2 - x1) / 2);
                             label.setAttribute('y', 8);
@@ -632,7 +608,7 @@
                 g.innerHTML = '';
                 
                 // Re-draw streaks for closed state
-                currentTopStreaks.forEach(streak => {
+                topStreaks.forEach(streak => {
                     const yearStart = new Date(year, 0, 1);
                     const yearEnd = new Date(year, 11, 31, 23, 59, 59);
                     if (streak.to >= yearStart && streak.from <= yearEnd) {
@@ -648,7 +624,7 @@
                         rect.setAttribute('class', 'streak-rect');
                         g.appendChild(rect);
                         
-                        if (streakEnd - streakStart >= 100) {
+                        if (streakEnd - streakStart >= (streak.to - streak.from) / 2) {
                             const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                             label.setAttribute('x', x1 + (x2 - x1) / 2);
                             label.setAttribute('y', 8);
@@ -659,7 +635,7 @@
                         }
                     }
                 });
-                
+
                 const smallSegments = createPathSegments(displayData, chartHeight);
                 smallSegments.forEach(segment => {
                     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -734,16 +710,15 @@
         async function loadAndVisualize() {
             try {
                 document.getElementById('charts-container').innerHTML = 
-                    '<div class="loading">Loading Tõravere data...</div>';
+                    '<div class="loading">Loading data (this may take a moment for large files)...</div>';
                 
-                const response = await fetch('./toravere_compacted.csv');
+                const response = await fetch('./' + dataFile);
                 const text = await response.text();
                 
                 document.getElementById('charts-container').innerHTML = 
-                    '<div class="loading">Processing Tõravere data...</div>';
+                    '<div class="loading">Processing data...</div>';
                 
-                const { years: yearsData, topStreaks } = await parseCSV(text);
-                currentTopStreaks = topStreaks;
+                const { years: yearsData } = await parseCSV(text);
                 
                 // Get years sorted
                 const years = Object.keys(yearsData).map(Number).sort((a, b) => a - b);

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Temperature Heatmap - Tõravere</title>
+    <title>Temperature Heatmap - Tartu</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -124,14 +124,7 @@
     <div class="container">
         <div class="header">
             <h1>Temperature Heatmap</h1>
-            <p>
-                <a href="index.html">Tartu Graph</a> | 
-                <a href="heatmap.html">Tartu Heatmap</a> <a href="https://meteo.physic.ut.ee/" target="_blank">🔗</a> | 
-                <a href="streaks.html">Tartu Streaks</a> |
-                <a href="toravere.html">Tõravere Graph</a> | 
-                <strong>Tõravere Heatmap</strong> <a href="https://www.ilmateenistus.ee/" target="_blank">🔗</a> |
-                <a href="toravere-streaks.html">Tõravere Streaks</a>
-            </p>
+            <p id="nav-links"></p>
         </div>
         
         <div id="main-content">
@@ -148,6 +141,23 @@
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script>
         const tooltip = document.getElementById('tooltip');
+        const isToravere = window.location.pathname.includes('toravere');
+        const dataFile = isToravere ? 'toravere_compacted.csv' : 'compacted_data.csv';
+        const locationName = isToravere ? 'Tõravere' : 'Tartu';
+
+        document.getElementById('nav-links').innerHTML = `
+            <div style="margin-bottom: 10px;">
+                <strong>Dataset:</strong>
+                <a href="${isToravere ? 'heatmap.html' : 'heatmap.html'}" style="${!isToravere ? 'font-weight: bold; text-decoration: underline;' : ''}">Tartu</a> | 
+                <a href="${isToravere ? 'toravere-heatmap.html' : 'toravere-heatmap.html'}" style="${isToravere ? 'font-weight: bold; text-decoration: underline;' : ''}">Tõravere</a>
+            </div>
+            <div>
+                <strong>View:</strong>
+                <a href="${isToravere ? 'toravere.html' : 'index.html'}">Graph</a> | 
+                <a href="${isToravere ? 'toravere-heatmap.html' : 'heatmap.html'}" style="font-weight: bold; text-decoration: underline;">Heatmap</a> | 
+                <a href="${isToravere ? 'toravere-streaks.html' : 'streaks.html'}">Streaks</a>
+            </div>
+        `;
 
         // Continuous color scale using D3
         // Below 0: Purple to Light Blue (using interpolatePuBu)
@@ -216,6 +226,7 @@
             const result = {};
             for (const year in years) {
                 result[year] = [];
+                // Create entries for all 366 possible days to keep x-axis aligned
                 for (let month = 0; month < 12; month++) {
                     for (let day = 1; day <= 31; day++) {
                         const d = new Date(year, month, day);
@@ -292,6 +303,7 @@
             
             container.appendChild(heatmap);
             
+            // Add months axis
             const monthsAxis = document.createElement('div');
             monthsAxis.className = 'months-axis';
             ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].forEach(m => {
@@ -306,7 +318,7 @@
         async function init() {
             try {
                 createLegend();
-                const response = await fetch('./toravere_compacted.csv');
+                const response = await fetch('./' + dataFile);
                 const text = await response.text();
                 const data = await parseData(text);
                 renderHeatmap(data);
