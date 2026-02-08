@@ -118,15 +118,15 @@
         }
 
         .streak-card {
-            padding: 12px;
-            margin-bottom: 10px;
+            padding: 8px 12px;
+            margin-bottom: 6px;
             border-radius: 6px;
             background: white;
             border: 1px solid #eee;
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 12px;
         }
         .streak-num {
             width: 24px;
@@ -208,6 +208,9 @@
                             <span class="temp-display" id="temp-display">0°C</span>
                         </div>
                         <input type="range" id="temp-threshold" min="-25" max="0" value="0" step="1">
+                        <div style="font-size: 11px; color: #95a5a6; margin-top: 4px; text-align: right;">
+                            Use arrow keys <kbd>←</kbd> <kbd>→</kbd> to adjust
+                        </div>
                     </div>
                 </div>
 
@@ -217,7 +220,7 @@
                 <div class="legend">
                     <div class="legend-item">
                         <div class="legend-box below-zero"></div>
-                        <span>Sub-zero temperatures</span>
+                        <span id="legend-threshold-label">Temperatures ≤ 0°C</span>
                     </div>
                     <div class="legend-item">
                         <div class="legend-box streak"></div>
@@ -235,10 +238,13 @@
         const thresholdSlider = document.getElementById('temp-threshold');
         const thresholdDisplay = document.getElementById('temp-display');
         const isToravere = window.location.pathname.includes('toravere');
-        const dataFile = isToravere ? 'toravere_compacted.csv' : 'compacted_data.csv';
+        const dataFile = isToravere ? 'data/toravere_compacted.csv' : 'data/compacted_data.csv';
+        const streaksDataFile = isToravere ? 'data/toravere_streaks.json' : 'data/streaks_data.json';
+        const intervalsDataFile = isToravere ? 'data/toravere_intervals.csv' : 'data/streaks_intervals.csv';
         const locationName = isToravere ? 'Tõravere' : 'Tartu';
 
-        let cachedRawData = [];
+        let cachedStreaksData = null;
+        let cachedIntervalsData = {}; // threshold -> [{from, to}]
         let currentThreshold = 0;
 
         document.getElementById('page-title').textContent = `${locationName} Winter Streaks`;
@@ -257,80 +263,89 @@
         `;
 
         async function loadData() {
-            const response = await fetch(dataFile + '?t=' + new Date().getTime());
-            const text = await response.text();
-            const lines = text.split('\n');
+            // Load streaks JSON and intervals CSV
+            const [streaksRes, intervalsRes] = await Promise.all([
+                fetch(streaksDataFile + '?t=' + new Date().getTime()),
+                fetch(intervalsDataFile + '?t=' + new Date().getTime())
+            ]);
+
+            cachedStreaksData = await streaksRes.json();
+            const intervalsText = await intervalsRes.text();
             
-            cachedRawData = [];
+            // Parse intervals CSV
+            const lines = intervalsText.split('\n');
+            cachedIntervalsData = {};
             for (let i = 1; i < lines.length; i++) {
                 const line = lines[i].trim();
                 if (!line) continue;
-                const parts = line.split(', ');
-                const date = new Date(parts[0]);
-                const temp = parseFloat(parts[3] || parts[1]);
-                if (isNaN(temp)) continue;
-                cachedRawData.push({ date, temp });
+                const [threshold, start, end] = line.split(',');
+                if (!cachedIntervalsData[threshold]) cachedIntervalsData[threshold] = [];
+                cachedIntervalsData[threshold].push({
+                    from: new Date(start),
+                    to: new Date(end)
+                });
             }
         }
 
         function analyzeData(threshold) {
-            const allData = [];
-            const streaks = [];
-            let currentStreak = null;
-
-            for (const point of cachedRawData) {
-                const { date, temp } = point;
-                const month = date.getMonth();
-                
-                // Only consider winter months (Oct-Apr)
-                if (month >= 4 && month <= 9) {
-                    if (currentStreak) {
-                        streaks.push(currentStreak);
-                        currentStreak = null;
-                    }
-                    continue;
-                }
-
-                allData.push(point);
-
-                if (temp <= threshold) {
-                    if (!currentStreak) {
-                        currentStreak = { from: date, to: date, points: [point] };
-                    } else {
-                        currentStreak.to = date;
-                        currentStreak.points.push(point);
-                    }
-                } else {
-                    if (currentStreak) {
-                        streaks.push(currentStreak);
-                        currentStreak = null;
-                    }
-                }
-            }
-            if (currentStreak) streaks.push(currentStreak);
-
-            streaks.forEach(s => s.durationMs = s.to - s.from);
+            // Use precomputed streaks from JSON
+            const precomputed = cachedStreaksData[threshold] || { top10: [], current: null };
             
-            // Find the current ongoing streak (if it ends at the last data point)
-            const lastPoint = cachedRawData[cachedRawData.length - 1];
-            const currentOngoingStreak = streaks.find(s => s.to.getTime() === lastPoint.date.getTime());
-            if (currentOngoingStreak) {
-                currentOngoingStreak.isCurrent = true;
+            // Use precomputed intervals from CSV
+            const intervals = cachedIntervalsData[threshold] || [];
+            
+            // Convert date strings back to Date objects for top10
+            const top10 = precomputed.top10.map(s => ({
+                ...s,
+                from: new Date(s.start),
+                to: new Date(s.end),
+                durationMs: s.durationMs
+            }));
+
+            let currentOngoingStreak = null;
+            if (precomputed.current) {
+                currentOngoingStreak = {
+                    ...precomputed.current,
+                    from: new Date(precomputed.current.start),
+                    to: new Date(precomputed.current.end),
+                    isCurrent: true
+                };
             }
 
-            const top10 = streaks.sort((a, b) => b.durationMs - a.durationMs).slice(0, 10);
-            top10.forEach((s, i) => s.rank = i + 1);
-
+            // Group intervals by winter for the visualization
             const winters = {};
-            allData.forEach(p => {
-                const year = p.date.getFullYear();
-                const month = p.date.getMonth();
+            
+            // First, identify all possible winters from the streaks JSON (which covers all years)
+            // or from the thresholds we know exist.
+            // Since we want to show all years even if empty, we need a list of all years.
+            // We can get this from the threshold 0 intervals which should cover most winters.
+            const allThreshold0 = cachedIntervalsData["0"] || [];
+            allThreshold0.forEach(interval => {
+                const d = new Date(interval.from);
+                const month = d.getMonth();
+                const year = d.getFullYear();
                 const winterKey = (month <= 3) ? `${year-1}/${year}` : `${year}/${year+1}`;
                 if (!winters[winterKey]) winters[winterKey] = [];
-                winters[winterKey].push(p);
             });
 
-            return { winters, top10, currentStreak: currentOngoingStreak };
+            // Now fill in the actual intervals for the selected threshold
+            intervals.forEach(interval => {
+                const { from, to } = interval;
+                const month = from.getMonth();
+                const year = from.getFullYear();
+                const winterKey = (month <= 3) ? `${year-1}/${year}` : `${year}/${year+1}`;
+                
+                if (!winters[winterKey]) winters[winterKey] = [];
+                winters[winterKey].push({ from, to });
+            });
+
+            // Sort winters
+            const sortedWinters = {};
+            Object.keys(winters).sort().forEach(key => {
+                sortedWinters[key] = winters[key];
+            });
+
+            return { winters: sortedWinters, top10, currentStreak: currentOngoingStreak };
         }
 
         function formatDuration(ms) {
@@ -346,36 +361,26 @@
             container.innerHTML = '';
             listContainer.innerHTML = '';
 
-            // Get all streaks to find the current one if it's not in top 10
-            const currentStreak = Object.values(winters).flat().reduce((found, p) => {
-                if (found) return found;
-                // This is a bit inefficient but works for finding the streak object
-                return null; 
-            }, null);
-            
-            // Re-identify current streak from top10 or find it if missing
-            let currentStreakObj = top10.find(s => s.isCurrent);
-            
-            // If not in top 10, we need to find it in the full list
-            if (!currentStreakObj) {
-                // We'll pass it through data in analyzeData instead
-            }
-
-            top10.forEach(s => {
+            top10.forEach((s, i) => {
+                const isOngoing = s.isOngoing;
                 const card = document.createElement('div');
                 card.className = 'streak-card';
                 card.innerHTML = `
-                    <div class="streak-num ${s.isCurrent ? 'current' : ''}">${s.rank}</div>
+                    <div class="streak-num ${isOngoing ? 'current' : ''}">${i + 1}</div>
                     <div class="streak-info">
-                        <div class="streak-dates">${s.from.toLocaleDateString()} - ${s.to.toLocaleDateString()}</div>
-                        <div class="streak-duration">${formatDuration(s.durationMs)} | Avg: ${(s.points.reduce((a,b)=>a+b.temp,0)/s.points.length).toFixed(1)}°C</div>
+                        <div class="streak-dates">
+                            ${s.from.toLocaleDateString()} - ${s.to.toLocaleDateString()}
+                            <span class="streak-duration" style="margin-left: 8px; font-weight: normal;">
+                                (${formatDuration(s.durationMs)}${isOngoing ? ' ONGOING' : ''})
+                            </span>
+                        </div>
                     </div>
                 `;
                 listContainer.appendChild(card);
             });
 
             // Add current streak if not in top 10
-            if (data.currentStreak && !top10.find(s => s === data.currentStreak)) {
+            if (data.currentStreak && !top10.find(s => s.from.getTime() === data.currentStreak.from.getTime())) {
                 const s = data.currentStreak;
                 const separator = document.createElement('div');
                 separator.style.margin = '15px 0 10px 0';
@@ -388,14 +393,18 @@
                 card.innerHTML = `
                     <div class="streak-num current"></div>
                     <div class="streak-info">
-                        <div class="streak-dates">${s.from.toLocaleDateString()} - ${s.to.toLocaleDateString()} (Current)</div>
-                        <div class="streak-duration">${formatDuration(s.durationMs)} | Avg: ${(s.points.reduce((a,b)=>a+b.temp,0)/s.points.length).toFixed(1)}°C</div>
+                        <div class="streak-dates">
+                            ${s.from.toLocaleDateString()} - ${s.to.toLocaleDateString()}
+                            <span class="streak-duration" style="margin-left: 8px; font-weight: normal;">
+                                (${formatDuration(s.durationMs)} ONGOING)
+                            </span>
+                        </div>
                     </div>
                 `;
                 listContainer.appendChild(card);
             }
 
-            const sortedWinterKeys = Object.keys(winters).sort();
+            const sortedWinterKeys = Object.keys(winters);
             const rowHeight = 26;
             const rowGap = 3;
             const labelWidth = 100;
@@ -423,46 +432,59 @@
                 label.textContent = key;
                 svg.appendChild(label);
 
-                winters[key].forEach(point => {
-                    if (point.temp <= currentThreshold) {
-                        const pMonth = point.date.getMonth();
-                        const pDay = point.date.getDate();
-                        const pHour = point.date.getHours();
-                        
-                        let normalizedDate;
-                        if (pMonth >= 10) normalizedDate = new Date(2021, pMonth, pDay, pHour, 0, 0);
-                        else normalizedDate = new Date(2022, pMonth, pDay, pHour, 0, 0);
+                winters[key].forEach(interval => {
+                    const { from, to } = interval;
+                    
+                    // Normalize dates for horizontal positioning
+                    const normalize = (d) => {
+                        const m = d.getMonth();
+                        const day = d.getDate();
+                        const h = d.getHours();
+                        return (m >= 10) ? new Date(2021, m, day, h, 0, 0) : new Date(2022, m, day, h, 0, 0);
+                    };
 
-                        // If the date is after April in the normalized year, we need to cap it or handle it
-                        // but since we are in Feb/Mar, it should be fine.
-                        
-                        const x = labelWidth + ((normalizedDate - templateStart) / templateDuration) * chartWidth;
-                        const width = (3600000 / templateDuration) * chartWidth;
-                        
-                        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-                        rect.setAttribute("x", x);
-                        rect.setAttribute("y", y);
-                        rect.setAttribute("width", width + 0.2);
-                        rect.setAttribute("height", rowHeight);
-                        
-                        const streak = top10.find(s => point.date >= s.from && point.date <= s.to);
-                        const isCurrent = data.currentStreak && point.date >= data.currentStreak.from && point.date <= data.currentStreak.to;
-                        
-                        let rectClass = "hour-rect ";
-                        if (isCurrent) rectClass += "current-streak";
-                        else if (streak) rectClass += "streak";
-                        else rectClass += "below-zero";
-                        
-                        rect.setAttribute("class", rectClass);
-                        
-                        rect.onmouseover = (e) => {
-                            tooltip.style.display = 'block';
-                            tooltip.textContent = `${point.date.toLocaleString()}: ${point.temp.toFixed(1)}°C`;
-                            tooltip.style.left = (e.pageX + 10) + 'px';
-                            tooltip.style.top = (e.pageY + 10) + 'px';
-                        };
-                        rect.onmouseout = () => tooltip.style.display = 'none';
-                        svg.appendChild(rect);
+                    const normFrom = normalize(from);
+                    const normTo = normalize(to);
+
+                    const x1 = labelWidth + ((normFrom - templateStart) / templateDuration) * chartWidth;
+                    const x2 = labelWidth + ((normTo - templateStart) / templateDuration) * chartWidth;
+                    const width = Math.max(1, x2 - x1);
+                    
+                    const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                    rect.setAttribute("x", x1);
+                    rect.setAttribute("y", y);
+                    rect.setAttribute("width", width);
+                    rect.setAttribute("height", rowHeight);
+                    
+                    const isTop10 = top10.find(s => from >= s.from && to <= s.to);
+                    const isCurrent = data.currentStreak && from >= data.currentStreak.from && to <= data.currentStreak.to;
+                    
+                    let rectClass = "hour-rect ";
+                    if (isCurrent) rectClass += "current-streak";
+                    else if (isTop10) rectClass += "streak";
+                    else rectClass += "below-zero";
+                    
+                    rect.setAttribute("class", rectClass);
+                    
+                    rect.onmouseover = (e) => {
+                        tooltip.style.display = 'block';
+                        tooltip.textContent = `${from.toLocaleDateString()} - ${to.toLocaleDateString()}`;
+                        tooltip.style.left = (e.pageX + 10) + 'px';
+                        tooltip.style.top = (e.pageY + 10) + 'px';
+                    };
+                    rect.onmouseout = () => tooltip.style.display = 'none';
+                    svg.appendChild(rect);
+
+                    // Add rank number if it's top 10
+                    if (isTop10) {
+                        const rank = top10.indexOf(isTop10) + 1;
+                        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                        text.setAttribute("x", x1 + 4);
+                        text.setAttribute("y", y + 17);
+                        text.setAttribute("class", "streak-marker");
+                        text.setAttribute("style", "font-size: 11px;");
+                        text.textContent = rank;
+                        svg.appendChild(text);
                     }
                 });
             });
@@ -502,48 +524,30 @@
             svg.appendChild(novLabel);
 
             // 3. Draw streak markers (Foreground)
-            sortedWinterKeys.forEach((key, rowIndex) => {
-                const y = rowIndex * (rowHeight + rowGap);
-                winters[key].forEach(point => {
-                    const streak = top10.find(s => point.date >= s.from && point.date <= s.to);
-                    const currentStreakObj = data.currentStreak;
-                    const isPointInCurrent = currentStreakObj && point.date >= currentStreakObj.from && point.date <= currentStreakObj.to;
-                    
-                    const activeStreak = streak || (isPointInCurrent ? currentStreakObj : null);
-                    
-                    if (activeStreak && (point.date.getTime() === activeStreak.from.getTime() || 
-                       (point.date > activeStreak.from && point.date.getTime() === winters[key][0].date.getTime()))) {
-                        
-                        const pMonth = point.date.getMonth();
-                        const pDay = point.date.getDate();
-                        const pHour = point.date.getHours();
-                        let normalizedDate;
-                        if (pMonth >= 10) normalizedDate = new Date(2021, pMonth, pDay, pHour, 0, 0);
-                        else normalizedDate = new Date(2022, pMonth, pDay, pHour, 0, 0);
-                        const x = labelWidth + ((normalizedDate - templateStart) / templateDuration) * chartWidth;
-
-                        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                        text.setAttribute("x", x + 4);
-                        text.setAttribute("y", y + 17);
-                        text.setAttribute("class", "streak-marker");
-                        text.setAttribute("style", "font-size: 11px;");
-                        text.textContent = streak ? streak.rank : "";
-                        svg.appendChild(text);
-                    }
-                });
-            });
+            // No longer needed here as they are drawn within the intervals loop above
         }
 
         function updateVisualization() {
             currentThreshold = parseInt(thresholdSlider.value);
             thresholdDisplay.textContent = `${currentThreshold}°C`;
+            document.getElementById('legend-threshold-label').textContent = `Temperatures ≤ ${currentThreshold}°C`;
             const analyzedData = analyzeData(currentThreshold);
             render(analyzedData);
         }
 
         thresholdSlider.oninput = updateVisualization;
 
+        // Enable arrow keys immediately and focus slider
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                // The slider handles arrows by default if focused, 
+                // but we can force it or just let focus do the work.
+                thresholdSlider.focus();
+            }
+        });
+
         loadData().then(() => {
+            thresholdSlider.focus();
             updateVisualization();
         }).catch(err => {
             console.error(err);

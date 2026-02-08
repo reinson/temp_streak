@@ -251,7 +251,7 @@ async function refreshData() {
     await generateStreaks(compactedFile, streaksFile, intervalsFile);
 
     // Tartu (Tõravere) data is not updating, so we only compute streaks if they don't exist
-    if (!fs.existsSync(toravereStreaksFile)) {
+    if (!fs.existsSync(toravereIntervalsFile)) {
         console.log("Generating Tõravere streaks (one-time)...");
         await generateStreaks(toravereRawFile, toravereStreaksFile, toravereIntervalsFile);
     }
