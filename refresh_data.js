@@ -1,9 +1,19 @@
+const path = require('path');
 const fs = require('fs');
 const https = require('https');
 const readline = require('readline');
+const { generateStreaks } = require('./generate_streaks');
 
-const outputFile = './all_data.csv';
-const compactedFile = './compacted_data.csv';
+const baseDir = __dirname;
+const dataDir = path.join(baseDir, 'data');
+const outputFile = path.join(dataDir, 'all_data.csv');
+const compactedFile = path.join(dataDir, 'compacted_data.csv');
+const streaksFile = path.join(dataDir, 'streaks_data.json');
+const intervalsFile = path.join(dataDir, 'streaks_intervals.csv');
+
+const toravereRawFile = path.join(dataDir, 'toravere_compacted.csv'); 
+const toravereStreaksFile = path.join(dataDir, 'toravere_streaks.json');
+const toravereIntervalsFile = path.join(dataDir, 'toravere_intervals.csv');
 
 /**
  * Formats a Date object to YYYY-MM-DD HH:mm:ss
@@ -238,6 +248,13 @@ async function refreshData() {
 
     console.log("Refresh complete.");
     await compactData();
+    await generateStreaks(compactedFile, streaksFile, intervalsFile);
+
+    // Tartu (Tõravere) data is not updating, so we only compute streaks if they don't exist
+    if (!fs.existsSync(toravereStreaksFile)) {
+        console.log("Generating Tõravere streaks (one-time)...");
+        await generateStreaks(toravereRawFile, toravereStreaksFile, toravereIntervalsFile);
+    }
 }
 
 refreshData();

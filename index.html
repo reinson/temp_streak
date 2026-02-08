@@ -196,7 +196,8 @@
 
     <script>
         const isToravere = window.location.pathname.includes('toravere');
-        const dataFile = isToravere ? 'toravere_compacted.csv' : 'compacted_data.csv';
+        const dataFile = isToravere ? 'data/toravere_compacted.csv' : 'data/compacted_data.csv';
+        const streaksDataFile = isToravere ? 'data/toravere_streaks.json' : 'data/streaks_data.json';
         const locationName = isToravere ? 'Tõravere' : 'Tartu';
 
         document.getElementById('nav-links').innerHTML = `
@@ -212,6 +213,8 @@
                 <a href="${isToravere ? 'toravere-streaks.html' : 'streaks.html'}">Streaks</a>
             </div>
         `;
+
+        let streaksData = null;
 
         // Parse CSV data in chunks to avoid stack overflow
         async function parseCSV(text) {
@@ -275,19 +278,27 @@
             return { years, minTemp, maxTemp };
         }
 
-        // Define the top 10 longest streaks below 0°C
-        const topStreaks = [
-            { num: 1, from: new Date('2009-12-29T01:10:00'), to: new Date('2010-02-23T14:20:00'), duration: '56d 13h 10m' },
-            { num: 2, from: new Date('2006-01-30T16:15:00'), to: new Date('2006-03-14T11:25:00'), duration: '42d 19h 10m' },
-            { num: 3, from: new Date('2012-01-13T11:15:00'), to: new Date('2012-02-20T04:05:00'), duration: '37d 16h 50m' },
-            { num: 4, from: new Date('2025-12-29T07:35:00'), to: new Date('2026-02-01T00:00:00'), duration: '33d 13h 39m (ONGOING)' },
-            { num: 5, from: new Date('2005-02-12T13:25:00'), to: new Date('2005-03-17T14:25:00'), duration: '33d 1h' },
-            { num: 6, from: new Date('2010-12-07T03:35:00'), to: new Date('2011-01-07T20:05:00'), duration: '31d 16h 30m' },
-            { num: 7, from: new Date('2022-11-17T17:30:00'), to: new Date('2022-12-18T22:35:00'), duration: '31d 5h 5m' },
-            { num: 8, from: new Date('2015-12-26T15:20:00'), to: new Date('2016-01-26T09:30:00'), duration: '30d 18h 10m' },
-            { num: 9, from: new Date('2014-01-12T00:10:00'), to: new Date('2014-02-07T09:35:00'), duration: '26d 9h 25m' },
-            { num: 10, from: new Date('2013-01-05T05:05:00'), to: new Date('2013-01-30T13:45:00'), duration: '25d 8h 40m' }
-        ];
+        function getTopStreaks() {
+            if (!streaksData || !streaksData["0"]) return [];
+            return streaksData["0"].top10.map((s, i) => ({
+                num: i + 1,
+                from: new Date(s.start),
+                to: new Date(s.end),
+                duration: formatDuration(s.durationMs) + (s.isOngoing ? ' (ONGOING)' : '')
+            }));
+        }
+
+        function formatDuration(ms) {
+            const days = Math.floor(ms / (24 * 60 * 60 * 1000));
+            const hours = Math.floor((ms % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+            const minutes = Math.floor((ms % (60 * 60 * 1000)) / (60 * 1000));
+            
+            let res = '';
+            if (days > 0) res += days + 'd ';
+            if (hours > 0) res += hours + 'h ';
+            if (minutes > 0) res += minutes + 'm';
+            return res.trim() || '0m';
+        }
 
         // Downsample data to reduce points (for smoother rendering)
         function downsample(data, maxPoints = 3000) {
@@ -368,7 +379,7 @@
             let yScale = getYScale(chartHeight);
 
             // Draw streaks for closed state
-            topStreaks.forEach(streak => {
+            getTopStreaks().forEach(streak => {
                 const streakYearStart = new Date(year, 0, 1);
                 const streakYearEnd = new Date(year, 11, 31, 23, 59, 59);
                 if (streak.to >= streakYearStart && streak.from <= streakYearEnd) {
@@ -550,7 +561,7 @@
                 g.innerHTML = ''; // Clear and redraw
                 
                 // Re-draw streaks (drawn first to be in background)
-                topStreaks.forEach(streak => {
+                getTopStreaks().forEach(streak => {
                     const yearStart = new Date(year, 0, 1);
                     const yearEnd = new Date(year, 11, 31, 23, 59, 59);
                     if (streak.to >= yearStart && streak.from <= yearEnd) {
@@ -608,7 +619,7 @@
                 g.innerHTML = '';
                 
                 // Re-draw streaks for closed state
-                topStreaks.forEach(streak => {
+                getTopStreaks().forEach(streak => {
                     const yearStart = new Date(year, 0, 1);
                     const yearEnd = new Date(year, 11, 31, 23, 59, 59);
                     if (streak.to >= yearStart && streak.from <= yearEnd) {
@@ -712,8 +723,13 @@
                 document.getElementById('charts-container').innerHTML = 
                     '<div class="loading">Loading data (this may take a moment for large files)...</div>';
                 
-                const response = await fetch('./' + dataFile);
-                const text = await response.text();
+                const [csvResponse, streaksResponse] = await Promise.all([
+                    fetch('./' + dataFile + '?t=' + new Date().getTime()),
+                    fetch('./' + streaksDataFile + '?t=' + new Date().getTime())
+                ]);
+                
+                const text = await csvResponse.text();
+                streaksData = await streaksResponse.json();
                 
                 document.getElementById('charts-container').innerHTML = 
                     '<div class="loading">Processing data...</div>';
