@@ -30,9 +30,9 @@ function updateDataSource() {
     if (!el) return;
 
     if (isToravere) {
-        el.innerHTML = 'Andmed pärinevad Keskkonnaagentuuri kodulehelt (<a href="https://ilmateenistus.ee" target="_blank" style="color: inherit;">ilmateenistus.ee</a>)';
+        el.innerHTML = 'Andmed pärinevad Keskkonnaagentuuri kodulehelt (<a href="https://ilmateenistus.ee" target="_blank" style="color: inherit;">ilmateenistus.ee</a>). Andmestik 2004-2024 aasta kohta.';
     } else {
-        el.innerHTML = 'Andmed pärinevad Tartu Ülikooli keskkonnafüüsika instituudi ilmajaamast (<a href="http://meteo.physic.ut.ee" target="_blank" style="color: inherit;">meteo.physic.ut.ee</a>)';
+        el.innerHTML = 'Andmed pärinevad Tartu Ülikooli keskkonnafüüsika instituudi ilmajaamast (<a href="http://meteo.physic.ut.ee" target="_blank" style="color: inherit;">meteo.physic.ut.ee</a>). Andmed uuenevad kord päevas.';
     }
 }
 
