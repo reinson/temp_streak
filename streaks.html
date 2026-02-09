@@ -467,6 +467,19 @@
             sortedWinterKeys.forEach((key, rowIndex) => {
                 const y = rowIndex * (rowHeight + rowGap);
                 
+                // Add fine horizontal line after every 5 years
+                if ((rowIndex + 1) % 5 === 0 && rowIndex !== sortedWinterKeys.length - 1) {
+                    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                    line.setAttribute("x1", 0);
+                    line.setAttribute("y1", y + rowHeight + rowGap / 2);
+                    line.setAttribute("x2", totalWidth);
+                    line.setAttribute("y2", y + rowHeight + rowGap / 2);
+                    line.setAttribute("stroke", "rgba(0,0,0,0.15)");
+                    line.setAttribute("stroke-width", "1");
+                    line.setAttribute("shape-rendering", "crispEdges");
+                    svg.appendChild(line);
+                }
+
                 // Add a transparent row background for easier hovering
                 const rowBg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
                 rowBg.setAttribute("x", 0);
@@ -624,16 +637,16 @@
 
                 const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
                 text.setAttribute("x", x + 5);
-                text.setAttribute("y", sortedWinterKeys.length * (rowHeight + rowGap) + 20);
-                text.setAttribute("style", "font-size: 12px; fill: #7f8c8d;");
+                text.setAttribute("y", sortedWinterKeys.length * (rowHeight + rowGap) + 15);
+                text.setAttribute("style", "font-size: 14px; fill: #2c3e50; font-weight: 500;");
                 text.textContent = dm.label;
                 svg.appendChild(text);
             });
 
             const novLabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
             novLabel.setAttribute("x", labelWidth + 5);
-            novLabel.setAttribute("y", sortedWinterKeys.length * (rowHeight + rowGap) + 20);
-            novLabel.setAttribute("style", "font-size: 12px; fill: #7f8c8d;");
+            novLabel.setAttribute("y", sortedWinterKeys.length * (rowHeight + rowGap) + 15);
+            novLabel.setAttribute("style", "font-size: 14px; fill: #2c3e50; font-weight: 500;");
             novLabel.textContent = "Nov";
             svg.appendChild(novLabel);
 
