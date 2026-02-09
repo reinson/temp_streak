@@ -88,14 +88,19 @@
             gap: 30px;
         }
         
+        .desktop-only { display: block; }
+        .mobile-only { display: none; }
+        
         @media (max-width: 768px) {
+            .desktop-only { display: none; }
+            .mobile-only { display: block; }
             body {
                 padding: 0;
-                background: white;
+            background: white;
             }
             .container {
                 padding: 10px;
-                border-radius: 0;
+            border-radius: 0;
                 box-shadow: none;
                 max-width: 100%;
             }
@@ -132,14 +137,14 @@
             input[type=range]::-webkit-slider-thumb {
                 width: 28px;
                 height: 28px;
-                margin-top: -10px; /* Centers thumb on track */
+                margin-top: -10px;
             }
             input[type=range]::-moz-range-thumb {
                 width: 28px;
                 height: 28px;
             }
             .container {
-                padding-bottom: 120px; /* Space for fixed slider */
+                padding-bottom: 120px;
             }
             .legend-top {
                 flex-wrap: wrap;
@@ -194,7 +199,7 @@
             stroke-width: 1.5;
             pointer-events: none;
         }
-        
+
         .streak-marker {
             font-size: 14px;
             font-weight: bold;
@@ -280,12 +285,12 @@
         <div class="header">
             <h1 id="page-title">Kui kaua võib?</h1>
             <p>Nii külm olla.</p>
-            <p style="margin-top: 10px; color: #7f8c8d; font-size: 14px;">
+            <p style="margin-top: 10px; color: #7f8c8d; font-size: 14px;" class="desktop-only">
                 Kasuta nooleklahve või slaiderit, et temperatuuri muuta ja vaata millal ning kui kaua on ilm sellest järjest külmem olnud.
             </p>
-            <div class="data-source">
-                Andmed pärinevad Tartu Ülikooli keskkonnafüüsika instituudi ilmajaamast (<a href="http://meteo.physic.ut.ee" target="_blank" style="color: inherit; font-size: inherit; margin: 0;">meteo.physic.ut.ee</a>)
-            </div>
+            <p style="margin-top: 10px; color: #7f8c8d; font-size: 14px;" class="mobile-only">
+                Kasuta slaiderit, et temperatuuri muuta ja vaata millal ning kui kaua on ilm sellest järjest külmem olnud.
+            </p>
         </div>
 
         <div class="controls-top">
@@ -293,10 +298,10 @@
                 <div class="slider-header">
                     <label for="temp-threshold">Temperatuuri lävi:</label>
                     <span class="temp-display" id="temp-display">0°C</span>
-                </div>
+        </div>
                 <input type="range" id="temp-threshold" min="-25" max="0" value="0" step="1">
-            </div>
-            
+    </div>
+
             <div class="legend-top">
                 <div class="legend-item">
                     <div class="legend-box long" style="background: #2e86c1;"></div>
@@ -331,7 +336,8 @@
         </div>
 
         <div class="footer-nav">
-            <p id="nav-links"></p>
+            <div class="data-source" id="data-source"></div>
+            <p id="nav-links" style="margin-top: 15px;"></p>
         </div>
     </div>
 
@@ -341,10 +347,6 @@
     <script src="common.js"></script>
     <script src="streaks.js"></script>
     <script>
-        // Use a small helper to ensure we're on the right dataset if someone lands on index.html
-        if (window.location.pathname.endsWith('index.html') || window.location.pathname.endsWith('/')) {
-            window.appConfig.isToravere = false;
-        }
         initStreaks();
     </script>
 </body>

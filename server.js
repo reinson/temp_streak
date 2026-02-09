@@ -1,6 +1,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const url = require('url');
 
 const port = 3000;
 
@@ -13,26 +14,19 @@ const mimeTypes = {
 };
 
 const server = http.createServer((req, res) => {
-    let filePath = '.' + req.url;
+    // Parse URL and strip query parameters
+    const parsedUrl = url.parse(req.url);
+    let filePath = '.' + parsedUrl.pathname;
     
-    // Handle routes
-    if (filePath === './toravere' || filePath === './toravere/') {
-        filePath = './toravere.html';
-    } else if (filePath === './heatmap' || filePath === './heatmap/') {
-        filePath = './heatmap.html';
-    } else if (filePath === './toravere-heatmap' || filePath === './toravere-heatmap/') {
-        filePath = './toravere-heatmap.html';
-    } else if (filePath === './streaks' || filePath === './streaks/') {
-        filePath = './streaks.html';
-    } else if (filePath === './toravere-streaks' || filePath === './toravere-streaks/') {
-        filePath = './toravere-streaks.html';
-    } else if (filePath === './') {
+    // Handle root route
+    if (filePath === './') {
         filePath = './index.html';
     }
 
     const extname = String(path.extname(filePath)).toLowerCase();
     const contentType = mimeTypes[extname] || 'application/octet-stream';
 
+    // Disable caching for development
     fs.readFile(filePath, (error, content) => {
         if (error) {
             if (error.code === 'ENOENT') {
@@ -43,7 +37,10 @@ const server = http.createServer((req, res) => {
                 res.end(`Server Error: ${error.code}`, 'utf-8');
             }
         } else {
-            res.writeHead(200, { 'Content-Type': contentType });
+            res.writeHead(200, {
+                'Content-Type': contentType,
+                'Cache-Control': 'no-cache, no-store, must-revalidate'
+            });
             res.end(content, 'utf-8');
         }
     });

@@ -3,24 +3,37 @@ function updateNavLinks(activeView) {
     const navLinks = document.getElementById('nav-links');
     if (!navLinks) return;
 
-    const currentPath = window.location.pathname;
     const isStreaks = activeView === 'streaks';
     const isGraph = activeView === 'graph';
     const isHeatmap = activeView === 'heatmap';
 
+    const loc = '?loc=toravere';
+
     navLinks.innerHTML = `
         <div style="margin-bottom: 10px;">
             <strong>Andmestik:</strong>
-            <a href="${isGraph ? 'graph.html' : isHeatmap ? 'heatmap.html' : 'index.html'}" style="${!isToravere ? 'font-weight: bold; text-decoration: underline;' : ''}">Tartu</a> | 
-            <a href="${isGraph ? 'toravere.html' : isHeatmap ? 'toravere-heatmap.html' : 'toravere-streaks.html'}" style="${isToravere ? 'font-weight: bold; text-decoration: underline;' : ''}">Tõravere</a>
+            <a href="${isStreaks ? 'index.html' : isGraph ? 'graph.html' : 'heatmap.html'}" style="${!isToravere ? 'font-weight: bold; text-decoration: underline;' : ''}">Tartu</a> | 
+            <a href="${(isStreaks ? 'index.html' : isGraph ? 'graph.html' : 'heatmap.html') + loc}" style="${isToravere ? 'font-weight: bold; text-decoration: underline;' : ''}">Tõravere</a>
         </div>
         <div>
             <strong>Vaade:</strong>
-            <a href="${isToravere ? 'toravere.html' : 'graph.html'}" style="${isGraph ? 'font-weight: bold; text-decoration: underline;' : ''}">Graafik</a> | 
-            <a href="${isToravere ? 'toravere-heatmap.html' : 'heatmap.html'}" style="${isHeatmap ? 'font-weight: bold; text-decoration: underline;' : ''}">Soojuskaart</a> | 
-            <a href="${isToravere ? 'toravere-streaks.html' : 'index.html'}" style="${isStreaks ? 'font-weight: bold; text-decoration: underline;' : ''}">Perioodid</a>
+            <a href="graph.html${isToravere ? loc : ''}" style="${isGraph ? 'font-weight: bold; text-decoration: underline;' : ''}">Graafik</a> | 
+            <a href="heatmap.html${isToravere ? loc : ''}" style="${isHeatmap ? 'font-weight: bold; text-decoration: underline;' : ''}">Soojuskaart</a> | 
+            <a href="index.html${isToravere ? loc : ''}" style="${isStreaks ? 'font-weight: bold; text-decoration: underline;' : ''}">Perioodid</a>
         </div>
     `;
+}
+
+function updateDataSource() {
+    const { isToravere } = window.appConfig;
+    const el = document.getElementById('data-source');
+    if (!el) return;
+
+    if (isToravere) {
+        el.innerHTML = 'Andmed pärinevad Keskkonnaagentuuri kodulehelt (<a href="https://ilmateenistus.ee" target="_blank" style="color: inherit;">ilmateenistus.ee</a>)';
+    } else {
+        el.innerHTML = 'Andmed pärinevad Tartu Ülikooli keskkonnafüüsika instituudi ilmajaamast (<a href="http://meteo.physic.ut.ee" target="_blank" style="color: inherit;">meteo.physic.ut.ee</a>)';
+    }
 }
 
 function formatDuration(ms) {

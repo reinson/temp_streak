@@ -325,6 +325,7 @@ function updateStreaksVisualization() {
 
 async function initStreaks() {
     updateNavLinks('streaks');
+    updateDataSource();
     const thresholdSlider = document.getElementById('temp-threshold');
     thresholdSlider.oninput = updateStreaksVisualization;
     window.addEventListener('keydown', (e) => {

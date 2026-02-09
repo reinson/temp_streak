@@ -107,7 +107,7 @@ async function findLongestStreaks(filePath, threshold, mode = 'below') {
 // Example usage: Find streaks where temperature didn't go over 0 degrees
 const threshold = parseFloat(process.argv[2]) || 0;
 const mode = process.argv[3] === 'above' ? 'above' : 'below';
-const dataPath = './all_data.csv';
+const dataPath = './data/compacted_data.csv';
 
 console.log(`Searching for 10 longest streaks where temperature is ${mode} ${threshold}°C...`);
 
