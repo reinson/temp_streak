@@ -148,14 +148,14 @@
         document.getElementById('nav-links').innerHTML = `
             <div style="margin-bottom: 10px;">
                 <strong>Andmestik:</strong>
-                <a href="${isToravere ? 'heatmap.html' : 'heatmap.html'}" style="${!isToravere ? 'font-weight: bold; text-decoration: underline;' : ''}">Tartu</a> | 
-                <a href="${isToravere ? 'toravere-heatmap.html' : 'toravere-heatmap.html'}" style="${isToravere ? 'font-weight: bold; text-decoration: underline;' : ''}">Tõravere</a>
+                <a href="heatmap.html" style="${!isToravere ? 'font-weight: bold; text-decoration: underline;' : ''}">Tartu</a> | 
+                <a href="toravere-heatmap.html" style="${isToravere ? 'font-weight: bold; text-decoration: underline;' : ''}">Tõravere</a>
             </div>
             <div>
                 <strong>Vaade:</strong>
-                <a href="${isToravere ? 'toravere.html' : 'index.html'}">Graafik</a> | 
+                <a href="${isToravere ? 'toravere.html' : 'graph.html'}">Graafik</a> | 
                 <a href="${isToravere ? 'toravere-heatmap.html' : 'heatmap.html'}" style="font-weight: bold; text-decoration: underline;">Soojuskaart</a> | 
-                <a href="${isToravere ? 'toravere-streaks.html' : 'streaks.html'}">Perioodid</a>
+                <a href="${isToravere ? 'toravere-streaks.html' : 'index.html'}">Perioodid</a>
             </div>
         `;
 
