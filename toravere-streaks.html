@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="et">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Winter Streaks Visualization</title>
+    <title>Talvised perioodid</title>
     <style>
+        /* Same styles as streaks.html */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
@@ -22,24 +23,23 @@
         }
         .header {
             margin-bottom: 20px;
-            text-align: center;
+            text-align: left;
         }
-        .header h1 { font-size: 32px; color: #2c3e50; margin-bottom: 10px; }
+        .header h1 { font-size: 32px; color: #2c3e50; margin-bottom: 5px; }
         .header p { color: #7f8c8d; font-size: 16px; }
         .header a { color: #3498db; text-decoration: none; margin: 0 5px; }
         .header a:hover { text-decoration: underline; }
 
-        .controls {
-            background: #fcfcfc;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            border: 1px solid #eee;
+        .controls-top {
             display: flex;
-            flex-direction: column;
-            gap: 10px;
+            justify-content: flex-start;
+            align-items: flex-end;
+            margin-bottom: 20px;
+            padding: 0;
+            gap: 40px;
         }
         .slider-container {
+            flex: 0 1 300px;
             display: flex;
             flex-direction: column;
             gap: 8px;
@@ -59,11 +59,31 @@
             cursor: pointer;
         }
         .temp-display {
-            font-size: 16px;
+            font-size: 18px;
             font-weight: bold;
             color: #3498db;
         }
         
+        .legend-top {
+            display: flex;
+            gap: 20px;
+            padding-bottom: 5px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #2c3e50;
+            white-space: nowrap;
+        }
+        .legend-box {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+
         .main-layout {
             display: flex;
             gap: 30px;
@@ -89,17 +109,11 @@
         .hour-rect {
             shape-rendering: crispEdges;
         }
-        .hour-rect.below-zero { fill: #bdc3c7; } /* Less than 1 day */
-        .hour-rect.medium { fill: #5dade2; } /* More than 1 day */
-        .hour-rect.long { fill: #2e86c1; } /* More than 7 days */
-        .hour-rect.current-streak { fill: #2ecc71; } /* Current streak */
+        .hour-rect.below-zero { fill: #bdc3c7; }
+        .hour-rect.medium { fill: #5dade2; }
+        .hour-rect.long { fill: #2e86c1; }
+        .hour-rect.current-streak { fill: #2ecc71; }
         
-        .hour-rect.streak {
-            /* No animation */
-        }
-
-        /* No purple-pulse keyframes needed */
-
         .hour-rect.current-streak {
             fill: #2ecc71;
             stroke: #27ae60;
@@ -120,16 +134,6 @@
             text-shadow: 0 0 2px rgba(0,0,0,0.5);
         }
 
-        .year-row {
-            display: flex;
-            align-items: center;
-            height: 26px;
-            margin-bottom: 3px;
-            transition: background-color 0.2s;
-        }
-        .year-row:hover {
-            background-color: rgba(52, 152, 219, 0.1);
-        }
         .year-label {
             font-size: 13px;
             font-weight: bold;
@@ -141,8 +145,8 @@
             flex: 1;
             background: #fcfcfc;
             padding: 20px;
-            border-left: 1px solid #eee;
-            border-radius: 0 8px 8px 0;
+            border: 1px solid #eee;
+            border-radius: 8px;
             display: flex;
             flex-direction: column;
         }
@@ -171,9 +175,6 @@
             font-size: 12px;
             flex-shrink: 0;
         }
-        .streak-num.current {
-            background: #9b59b6;
-        }
         .streak-info { flex: 1; }
         .streak-dates { font-size: 13px; font-weight: 600; color: #2c3e50; }
         .streak-duration { font-size: 12px; color: #7f8c8d; }
@@ -191,494 +192,78 @@
             z-index: 100;
         }
 
-        .legend {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin-top: auto;
-            padding: 20px 0 0 0;
+        .footer-nav {
+            margin-top: 30px;
+            padding-top: 20px;
             border-top: 1px solid #eee;
+            text-align: center;
         }
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 13px;
-            color: #2c3e50;
-        }
-        .legend-box {
-            width: 16px;
-            height: 16px;
-            border-radius: 3px;
-            flex-shrink: 0;
-        }
-        .legend-box.below-zero { background-color: #bdc3c7; }
-        .legend-box.streak { background-color: #3498db; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1 id="page-title">Winter Streaks</h1>
-            <p id="nav-links"></p>
+            <h1 id="page-title">Kui kaua võib?</h1>
+            <p>Nii külm olla.</p>
+            <p style="margin-top: 10px; color: #7f8c8d; font-size: 14px;">
+                Kasuta nooleklahve või slaiderit, et temperatuuri muuta ja vaata millal ning kui kaua on ilm sellest järjest külmem olnud.
+            </p>
+        </div>
+
+        <div class="controls-top">
+            <div class="slider-container">
+                <div class="slider-header">
+                    <label for="temp-threshold">Temperatuuri lävi:</label>
+                    <span class="temp-display" id="temp-display">0°C</span>
+                </div>
+                <input type="range" id="temp-threshold" min="-25" max="0" value="0" step="1">
+            </div>
+            
+            <div class="legend-top">
+                <div class="legend-item">
+                    <div class="legend-box long" style="background: #2e86c1;"></div>
+                    <span>> 7 päeva</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-box medium" style="background: #5dade2;"></div>
+                    <span>> 1 päev</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-box below-zero" style="background: #bdc3c7;"></div>
+                    <span>< 1 päev</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-box current-streak" style="background: #2ecc71; border: 1px solid #27ae60;"></div>
+                    <span>Käimasolev</span>
+                </div>
+            </div>
         </div>
 
         <div class="main-layout">
             <div class="visualization-area">
                 <div id="heatmap-content">
-                    <div class="loading">Loading data...</div>
+                    <div class="loading">Andmete laadimine...</div>
                 </div>
             </div>
             
             <div class="streaks-list-area">
-                <div class="controls">
-                    <div class="slider-container">
-                        <div class="slider-header">
-                            <label for="temp-threshold">Temperature Threshold:</label>
-                            <span class="temp-display" id="temp-display">0°C</span>
-                        </div>
-                        <input type="range" id="temp-threshold" min="-25" max="0" value="0" step="1">
-                        <div style="font-size: 11px; color: #95a5a6; margin-top: 4px; text-align: right;">
-                            Use arrow keys <kbd>←</kbd> <kbd>→</kbd> to adjust
-                        </div>
-                    </div>
-                </div>
-
-                <h3 style="margin-bottom: 15px; color: #2c3e50; font-size: 16px;">Top 10 Longest Streaks</h3>
+                <h3 style="margin-bottom: 15px; color: #2c3e50; font-size: 16px;">10 pikimat perioodi</h3>
                 <div id="streaks-list"></div>
-                
-                <div class="legend">
-                    <div class="legend-item">
-                        <div class="legend-box long" style="background: #2e86c1;"></div>
-                        <span>> 7 days</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-box medium" style="background: #5dade2;"></div>
-                        <span>> 1 day</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-box below-zero" style="background: #bdc3c7;"></div>
-                        <span>< 1 day</span>
-                    </div>
-                </div>
             </div>
+        </div>
+
+        <div class="footer-nav">
+            <p id="nav-links"></p>
         </div>
     </div>
 
     <div id="tooltip" class="tooltip"></div>
 
+    <script src="config.js"></script>
+    <script src="common.js"></script>
+    <script src="streaks.js"></script>
     <script>
-        const tooltip = document.getElementById('tooltip');
-        const thresholdSlider = document.getElementById('temp-threshold');
-        const thresholdDisplay = document.getElementById('temp-display');
-        const isToravere = window.location.pathname.includes('toravere');
-        const dataFile = isToravere ? 'data/toravere_compacted.csv' : 'data/compacted_data.csv';
-        const streaksDataFile = isToravere ? 'data/toravere_streaks.json' : 'data/streaks_data.json';
-        const intervalsDataFile = isToravere ? 'data/toravere_intervals.csv' : 'data/streaks_intervals.csv';
-        const locationName = isToravere ? 'Tõravere' : 'Tartu';
-
-        let cachedStreaksData = null;
-        let cachedIntervalsData = {}; // threshold -> [{from, to}]
-        let currentThreshold = 0;
-
-        document.getElementById('page-title').textContent = `${locationName} Winter Streaks`;
-        document.getElementById('nav-links').innerHTML = `
-            <div style="margin-bottom: 10px;">
-                <strong>Dataset:</strong>
-                <a href="${isToravere ? 'streaks.html' : 'streaks.html'}" style="${!isToravere ? 'font-weight: bold; text-decoration: underline;' : ''}">Tartu</a> | 
-                <a href="${isToravere ? 'toravere-streaks.html' : 'toravere-streaks.html'}" style="${isToravere ? 'font-weight: bold; text-decoration: underline;' : ''}">Tõravere</a>
-            </div>
-            <div>
-                <strong>View:</strong>
-                <a href="${isToravere ? 'toravere.html' : 'index.html'}">Graph</a> | 
-                <a href="${isToravere ? 'toravere-heatmap.html' : 'heatmap.html'}">Heatmap</a> | 
-                <a href="${isToravere ? 'toravere-streaks.html' : 'streaks.html'}" style="font-weight: bold; text-decoration: underline;">Streaks</a>
-            </div>
-        `;
-
-        async function loadData() {
-            // Load streaks JSON and intervals CSV
-            const [streaksRes, intervalsRes] = await Promise.all([
-                fetch(streaksDataFile + '?t=' + new Date().getTime()),
-                fetch(intervalsDataFile + '?t=' + new Date().getTime())
-            ]);
-
-            cachedStreaksData = await streaksRes.json();
-            const intervalsText = await intervalsRes.text();
-            
-            // Parse intervals CSV
-            const lines = intervalsText.split('\n');
-            cachedIntervalsData = {};
-            for (let i = 1; i < lines.length; i++) {
-                const line = lines[i].trim();
-                if (!line) continue;
-                const [threshold, start, end] = line.split(',');
-                if (!cachedIntervalsData[threshold]) cachedIntervalsData[threshold] = [];
-                cachedIntervalsData[threshold].push({
-                    from: new Date(start),
-                    to: new Date(end)
-                });
-            }
-        }
-
-        function analyzeData(threshold) {
-            // Use precomputed streaks from JSON
-            const precomputed = cachedStreaksData[threshold] || { top10: [], current: null };
-            
-            // Use precomputed intervals from CSV
-            const intervals = cachedIntervalsData[threshold] || [];
-            
-            // Convert date strings back to Date objects for top10
-            const top10 = precomputed.top10.map(s => ({
-                ...s,
-                from: new Date(s.start),
-                to: new Date(s.end),
-                durationMs: s.durationMs
-            }));
-
-            let currentOngoingStreak = null;
-            if (precomputed.current) {
-                currentOngoingStreak = {
-                    ...precomputed.current,
-                    from: new Date(precomputed.current.start),
-                    to: new Date(precomputed.current.end),
-                    isCurrent: true
-                };
-            }
-
-            // Group intervals by winter for the visualization
-            const winters = {};
-            
-            // First, identify all possible winters from the streaks JSON (which covers all years)
-            // or from the thresholds we know exist.
-            // Since we want to show all years even if empty, we need a list of all years.
-            // We can get this from the threshold 0 intervals which should cover most winters.
-            const allThreshold0 = cachedIntervalsData["0"] || [];
-            allThreshold0.forEach(interval => {
-                const d = new Date(interval.from);
-                const month = d.getMonth();
-                const year = d.getFullYear();
-                const winterKey = (month <= 3) ? `${year-1}/${year}` : `${year}/${year+1}`;
-                if (!winters[winterKey]) winters[winterKey] = [];
-            });
-
-            // Now fill in the actual intervals for the selected threshold
-            intervals.forEach(interval => {
-                const { from, to } = interval;
-                const month = from.getMonth();
-                const year = from.getFullYear();
-                const winterKey = (month <= 3) ? `${year-1}/${year}` : `${year}/${year+1}`;
-                
-                if (!winters[winterKey]) winters[winterKey] = [];
-                winters[winterKey].push({ from, to });
-            });
-
-            // Sort winters
-            const sortedWinters = {};
-            Object.keys(winters).sort().forEach(key => {
-                sortedWinters[key] = winters[key];
-            });
-
-            return { winters: sortedWinters, top10, currentStreak: currentOngoingStreak };
-        }
-
-        function formatDuration(ms) {
-            const days = Math.floor(ms / (24 * 60 * 60 * 1000));
-            const hours = Math.floor((ms % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
-            return `${days}d ${hours}h`;
-        }
-
-        function render(data) {
-            const { winters, top10 } = data;
-            const container = document.getElementById('heatmap-content');
-            const listContainer = document.getElementById('streaks-list');
-            container.innerHTML = '';
-            listContainer.innerHTML = '';
-
-            top10.forEach((s, i) => {
-                const isOngoing = s.isOngoing;
-                const card = document.createElement('div');
-                card.className = 'streak-card';
-                
-                // Determine color based on duration for the circle
-                const durationDays = s.durationMs / (24 * 60 * 60 * 1000);
-                let circleColor = '#bdc3c7';
-                if (isOngoing) circleColor = '#2ecc71'; // Green for current streak
-                else if (durationDays > 7) circleColor = '#2e86c1';
-                else if (durationDays > 1) circleColor = '#5dade2';
-
-                card.innerHTML = `
-                    <div class="streak-num" style="background: ${circleColor}; color: white;">${i + 1}</div>
-                    <div class="streak-info">
-                        <div class="streak-dates">
-                            ${s.from.toLocaleDateString()} - ${s.to.toLocaleDateString()}
-                            <span class="streak-duration" style="margin-left: 8px; font-weight: normal;">
-                                (${formatDuration(s.durationMs)}${isOngoing ? ' ONGOING' : ''})
-                            </span>
-                        </div>
-                    </div>
-                `;
-                listContainer.appendChild(card);
-            });
-
-            // Add current streak if not in top 10
-            if (data.currentStreak && !top10.find(s => s.from.getTime() === data.currentStreak.from.getTime())) {
-                const s = data.currentStreak;
-                const separator = document.createElement('div');
-                separator.style.margin = '15px 0 10px 0';
-                separator.style.borderTop = '1px dashed #ccc';
-                listContainer.appendChild(separator);
-
-                const card = document.createElement('div');
-                card.className = 'streak-card';
-                card.style.border = '1px solid #2ecc71';
-                card.innerHTML = `
-                    <div class="streak-num" style="background: #2ecc71; color: white;"></div>
-                    <div class="streak-info">
-                        <div class="streak-dates">
-                            ${s.from.toLocaleDateString()} - ${s.to.toLocaleDateString()}
-                            <span class="streak-duration" style="margin-left: 8px; font-weight: normal;">
-                                (${formatDuration(s.durationMs)} ONGOING)
-                            </span>
-                        </div>
-                    </div>
-                `;
-                listContainer.appendChild(card);
-            }
-
-            const sortedWinterKeys = Object.keys(winters);
-            const rowHeight = 26;
-            const rowGap = 3;
-            const labelWidth = 100;
-            const chartWidth = 1200;
-            const totalWidth = labelWidth + chartWidth;
-            const totalHeight = sortedWinterKeys.length * (rowHeight + rowGap) + 40;
-
-            const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-            svg.setAttribute("class", "visualization-svg");
-            svg.setAttribute("viewBox", `0 0 ${totalWidth} ${totalHeight}`);
-            container.appendChild(svg);
-
-            const templateStart = new Date(2021, 10, 1, 0, 0, 0);
-            const templateEnd = new Date(2022, 4, 15, 23, 59, 59);
-            const templateDuration = templateEnd - templateStart;
-
-            // 1. Draw winter rows (Background)
-            sortedWinterKeys.forEach((key, rowIndex) => {
-                const y = rowIndex * (rowHeight + rowGap);
-                
-                // Add fine horizontal line after every 5 years
-                if ((rowIndex + 1) % 5 === 0 && rowIndex !== sortedWinterKeys.length - 1) {
-                    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-                    line.setAttribute("x1", 0);
-                    line.setAttribute("y1", y + rowHeight + rowGap / 2);
-                    line.setAttribute("x2", totalWidth);
-                    line.setAttribute("y2", y + rowHeight + rowGap / 2);
-                    line.setAttribute("stroke", "rgba(0,0,0,0.15)");
-                    line.setAttribute("stroke-width", "1");
-                    line.setAttribute("shape-rendering", "crispEdges");
-                    svg.appendChild(line);
-                }
-
-                // Add a transparent row background for easier hovering
-                const rowBg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-                rowBg.setAttribute("x", 0);
-                rowBg.setAttribute("y", y);
-                rowBg.setAttribute("width", totalWidth);
-                rowBg.setAttribute("height", rowHeight);
-                rowBg.setAttribute("fill", "transparent");
-                rowBg.setAttribute("class", "row-hover-bg");
-                svg.appendChild(rowBg);
-
-                const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                label.setAttribute("x", 5);
-                label.setAttribute("y", y + rowHeight / 2);
-                label.setAttribute("class", "year-label");
-                label.textContent = key;
-                svg.appendChild(label);
-
-                winters[key].forEach(interval => {
-                    const { from, to } = interval;
-                    
-                    // Normalize dates for horizontal positioning
-                    const normalize = (d) => {
-                        const m = d.getMonth();
-                        const day = d.getDate();
-                        const h = d.getHours();
-                        return (m >= 10) ? new Date(2021, m, day, h, 0, 0) : new Date(2022, m, day, h, 0, 0);
-                    };
-
-                    const normFrom = normalize(from);
-                    const normTo = normalize(to);
-
-                    const x1 = labelWidth + ((normFrom - templateStart) / templateDuration) * chartWidth;
-                    const x2 = labelWidth + ((normTo - templateStart) / templateDuration) * chartWidth;
-                    const width = Math.max(1, x2 - x1);
-                        
-                        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-                    rect.setAttribute("x", x1);
-                        rect.setAttribute("y", y);
-                    rect.setAttribute("width", width);
-                        rect.setAttribute("height", rowHeight);
-                        
-                        let rectClass = "hour-rect ";
-                    const durationDays = (to - from) / (24 * 60 * 60 * 1000);
-                    if (durationDays > 7) rectClass += "long";
-                    else if (durationDays > 1) rectClass += "medium";
-                        else rectClass += "below-zero";
-
-                    const isTop10 = top10.find(s => from >= s.from && to <= s.to);
-                    const isCurrent = data.currentStreak && from >= data.currentStreak.from && to <= data.currentStreak.to;
-                    
-                    if (isCurrent) {
-                        rectClass += " current-streak";
-                    } else if (isTop10) {
-                        rectClass += " streak";
-                    }
-                        
-                        rect.setAttribute("class", rectClass);
-                        
-                    rect.onmouseover = (e) => {
-                        tooltip.style.display = 'block';
-                        const durationMs = to - from;
-                        const days = Math.floor(durationMs / (24 * 60 * 60 * 1000));
-                        const hours = Math.floor((durationMs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
-                        tooltip.textContent = `${days}d ${hours}h`;
-                        tooltip.style.left = (e.pageX + 10) + 'px';
-                        tooltip.style.top = (e.pageY + 10) + 'px';
-                    };
-                        rect.onmouseout = () => tooltip.style.display = 'none';
-                        svg.appendChild(rect);
-                });
-            });
-
-            // 1.5 Draw streak markers (Foreground - rendered after all rectangles)
-            sortedWinterKeys.forEach((key, rowIndex) => {
-                const y = rowIndex * (rowHeight + rowGap);
-                const winterIntervals = winters[key];
-                
-                // Count top 10 streaks in this year for staggered alignment
-                const top10InYear = winterIntervals.filter(interval => 
-                    top10.find(s => interval.from >= s.from && interval.to <= s.to)
-                );
-
-                winterIntervals.forEach((interval) => {
-                    const { from, to } = interval;
-                    const isTop10 = top10.find(s => from >= s.from && to <= s.to);
-                    
-                    if (isTop10) {
-                        const rank = top10.indexOf(isTop10) + 1;
-                        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                        
-                        const normalize = (d) => {
-                            const m = d.getMonth();
-                            const day = d.getDate();
-                            const h = d.getHours();
-                            return (m >= 10) ? new Date(2021, m, day, h, 0, 0) : new Date(2022, m, day, h, 0, 0);
-                        };
-
-                        const normFrom = normalize(from);
-                        const normTo = normalize(to);
-                        const x1 = labelWidth + ((normFrom - templateStart) / templateDuration) * chartWidth;
-                        const x2 = labelWidth + ((normTo - templateStart) / templateDuration) * chartWidth;
-                        const width = Math.max(1, x2 - x1);
-                        const durationDays = (to - from) / (24 * 60 * 60 * 1000);
-                        
-                        // Center if shorter than 2 days, otherwise left-aligned
-                        if (durationDays < 2) {
-                            text.setAttribute("x", x1 + width / 2);
-                            text.setAttribute("text-anchor", "middle");
-                        } else {
-                            text.setAttribute("x", x1 + 4);
-                            text.setAttribute("text-anchor", "start");
-                        }
-
-                        // Staggered Y alignment for threshold -21 and below if multiple streaks exist
-                        let yOffset = 17; // Default middle-ish
-                        if (currentThreshold <= -21 && top10InYear.length > 1) {
-                            const streakIdx = top10InYear.indexOf(interval);
-                            yOffset = (streakIdx % 2 === 0) ? 12 : 22; // Even: higher, Odd: lower
-                        }
-
-                        text.setAttribute("y", y + yOffset);
-                        text.setAttribute("class", "streak-marker");
-                        
-                        // Dark gray if shorter than 1 day, otherwise white
-                        if (durationDays < 1) {
-                            text.setAttribute("style", "font-size: 11px; fill: #2c3e50; text-shadow: none; pointer-events: none;");
-                        } else {
-                            text.setAttribute("style", "font-size: 11px; pointer-events: none;");
-                        }
-                        
-                        text.textContent = rank;
-                        svg.appendChild(text);
-                    }
-                });
-            });
-
-            // 2. Draw month gridlines (Middle layer)
-            const dividerMonths = [
-                { m: 11, y: 2021, label: 'Dec' }, { m: 0, y: 2022, label: 'Jan' }, 
-                { m: 1, y: 2022, label: 'Feb' }, { m: 2, y: 2022, label: 'Mar' }, 
-                { m: 3, y: 2022, label: 'Apr' }, { m: 4, y: 2022, label: 'May' }
-            ];
-
-            dividerMonths.forEach(dm => {
-                const dividerDate = new Date(dm.y, dm.m, 1, 0, 0, 0);
-                const x = labelWidth + ((dividerDate - templateStart) / templateDuration) * chartWidth;
-                
-                const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-                line.setAttribute("x1", x);
-                line.setAttribute("y1", 0);
-                line.setAttribute("x2", x);
-                line.setAttribute("y2", sortedWinterKeys.length * (rowHeight + rowGap));
-                line.setAttribute("class", "month-divider");
-                svg.appendChild(line);
-
-                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                text.setAttribute("x", x + 5);
-                text.setAttribute("y", sortedWinterKeys.length * (rowHeight + rowGap) + 15);
-                text.setAttribute("style", "font-size: 14px; fill: #2c3e50; font-weight: 500;");
-                text.textContent = dm.label;
-                svg.appendChild(text);
-            });
-
-            const novLabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
-            novLabel.setAttribute("x", labelWidth + 5);
-            novLabel.setAttribute("y", sortedWinterKeys.length * (rowHeight + rowGap) + 15);
-            novLabel.setAttribute("style", "font-size: 14px; fill: #2c3e50; font-weight: 500;");
-            novLabel.textContent = "Nov";
-            svg.appendChild(novLabel);
-
-            // 3. Draw streak markers (Foreground)
-            // No longer needed here as they are drawn within the intervals loop above
-        }
-
-        function updateVisualization() {
-            currentThreshold = parseInt(thresholdSlider.value);
-            thresholdDisplay.textContent = `${currentThreshold}°C`;
-            const analyzedData = analyzeData(currentThreshold);
-            render(analyzedData);
-        }
-
-        thresholdSlider.oninput = updateVisualization;
-
-        // Enable arrow keys immediately and focus slider
-        window.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-                // The slider handles arrows by default if focused, 
-                // but we can force it or just let focus do the work.
-                thresholdSlider.focus();
-            }
-        });
-
-        loadData().then(() => {
-            thresholdSlider.focus();
-            updateVisualization();
-        }).catch(err => {
-            console.error(err);
-            document.getElementById('heatmap-content').innerHTML = '<div class="loading">Error loading data.</div>';
-        });
+        initStreaks();
     </script>
 </body>
 </html>
