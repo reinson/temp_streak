@@ -2,7 +2,7 @@ name: Update Weather Data
 
 on:
   schedule:
-    - cron: '0 * * * *' # Every hour
+    - cron: '0 23 * * *' # Every day at 01:00 Estonian time (UTC+2) / 02:00 (UTC+3)
   workflow_dispatch: # Manual trigger
 
 jobs:
