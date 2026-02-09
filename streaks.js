@@ -145,7 +145,7 @@ function renderStreaks(data) {
     svg.setAttribute("viewBox", `0 0 ${totalWidth} ${totalHeight}`);
     container.appendChild(svg);
 
-    const templateStart = new Date(2021, 10, 1, 0, 0, 0);
+    const templateStart = new Date(2021, 9, 1, 0, 0, 0);
     const templateEnd = new Date(2022, 4, 15, 23, 59, 59);
     const templateDuration = templateEnd - templateStart;
 
@@ -186,7 +186,7 @@ function renderStreaks(data) {
                 const m = d.getMonth();
                 const day = d.getDate();
                 const h = d.getHours();
-                return (m >= 10) ? new Date(2021, m, day, h, 0, 0) : new Date(2022, m, day, h, 0, 0);
+                return (m >= 9) ? new Date(2021, m, day, h, 0, 0) : new Date(2022, m, day, h, 0, 0);
             };
 
             const normFrom = normalize(from);
@@ -246,7 +246,7 @@ function renderStreaks(data) {
                     const m = d.getMonth();
                     const day = d.getDate();
                     const h = d.getHours();
-                    return (m >= 10) ? new Date(2021, m, day, h, 0, 0) : new Date(2022, m, day, h, 0, 0);
+                    return (m >= 9) ? new Date(2021, m, day, h, 0, 0) : new Date(2022, m, day, h, 0, 0);
                 };
                 const normFrom = normalize(from);
                 const normTo = normalize(to);
@@ -282,9 +282,10 @@ function renderStreaks(data) {
     });
 
     const dividerMonths = [
-        { m: 11, y: 2021, label: 'Dets' }, { m: 0, y: 2022, label: 'Jaan' }, 
-        { m: 1, y: 2022, label: 'Veebr' }, { m: 2, y: 2022, label: 'Märts' }, 
-        { m: 3, y: 2022, label: 'Apr' }, { m: 4, y: 2022, label: 'Mai' }
+        { m: 10, y: 2021, label: 'Nov' }, { m: 11, y: 2021, label: 'Dets' }, 
+        { m: 0, y: 2022, label: 'Jaan' }, { m: 1, y: 2022, label: 'Veebr' }, 
+        { m: 2, y: 2022, label: 'Märts' }, { m: 3, y: 2022, label: 'Apr' }, 
+        { m: 4, y: 2022, label: 'Mai' }
     ];
 
     dividerMonths.forEach(dm => {
@@ -306,12 +307,12 @@ function renderStreaks(data) {
         svg.appendChild(text);
     });
 
-    const novLabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    novLabel.setAttribute("x", labelWidth + 5);
-    novLabel.setAttribute("y", sortedWinterKeys.length * (rowHeight + rowGap) + 15);
-    novLabel.setAttribute("style", "font-size: 14px; fill: #2c3e50; font-weight: 500;");
-    novLabel.textContent = "Nov";
-    svg.appendChild(novLabel);
+    const oktLabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    oktLabel.setAttribute("x", labelWidth + 5);
+    oktLabel.setAttribute("y", sortedWinterKeys.length * (rowHeight + rowGap) + 15);
+    oktLabel.setAttribute("style", "font-size: 14px; fill: #2c3e50; font-weight: 500;");
+    oktLabel.textContent = "Okt";
+    svg.appendChild(oktLabel);
 }
 
 function updateStreaksVisualization() {

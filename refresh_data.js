@@ -186,7 +186,13 @@ async function getLatestDateInFile() {
 }
 
 async function refreshData() {
-    const latestDate = await getLatestDateInFile();
+    const forceUpdate = process.argv.includes('--force');
+    
+    if (forceUpdate) {
+        console.log("Force update requested. Re-fetching all data from scratch.");
+    }
+
+    const latestDate = forceUpdate ? null : await getLatestDateInFile();
     const now = new Date();
     
     let startDate;
@@ -250,9 +256,9 @@ async function refreshData() {
     await compactData();
     await generateStreaks(compactedFile, streaksFile, intervalsFile);
 
-    // Tartu (Tõravere) data is not updating, so we only compute streaks if they don't exist
-    if (!fs.existsSync(toravereIntervalsFile)) {
-        console.log("Generating Tõravere streaks (one-time)...");
+    // Tartu (Tõravere) data is not updating, so we only compute streaks if they don't exist (or --force)
+    if (forceUpdate || !fs.existsSync(toravereIntervalsFile)) {
+        console.log(`Generating Tõravere streaks${forceUpdate ? ' (forced)' : ' (one-time)'}...`);
         await generateStreaks(toravereRawFile, toravereStreaksFile, toravereIntervalsFile);
     }
 }
