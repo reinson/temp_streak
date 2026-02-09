@@ -22,24 +22,23 @@
         }
         .header {
             margin-bottom: 20px;
-            text-align: center;
+            text-align: left;
         }
-        .header h1 { font-size: 32px; color: #2c3e50; margin-bottom: 10px; }
+        .header h1 { font-size: 32px; color: #2c3e50; margin-bottom: 5px; }
         .header p { color: #7f8c8d; font-size: 16px; }
         .header a { color: #3498db; text-decoration: none; margin: 0 5px; }
         .header a:hover { text-decoration: underline; }
 
-        .controls {
-            background: #fcfcfc;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            border: 1px solid #eee;
+        .controls-top {
             display: flex;
-            flex-direction: column;
-            gap: 10px;
+            justify-content: flex-start;
+            align-items: flex-end;
+            margin-bottom: 20px;
+            padding: 0;
+            gap: 40px;
         }
         .slider-container {
+            flex: 0 1 300px;
             display: flex;
             flex-direction: column;
             gap: 8px;
@@ -59,9 +58,36 @@
             cursor: pointer;
         }
         .temp-display {
-            font-size: 16px;
+            font-size: 18px;
             font-weight: bold;
             color: #3498db;
+        }
+        
+        .legend-top {
+            display: flex;
+            gap: 20px;
+            padding-bottom: 5px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #2c3e50;
+            white-space: nowrap;
+        }
+        .legend-box {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+
+        .footer-nav {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            text-align: center;
         }
         
         .main-layout {
@@ -141,8 +167,8 @@
             flex: 1;
             background: #fcfcfc;
             padding: 20px;
-            border-left: 1px solid #eee;
-            border-radius: 0 8px 8px 0;
+            border: 1px solid #eee;
+            border-radius: 8px;
             display: flex;
             flex-direction: column;
         }
@@ -219,49 +245,57 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1 id="page-title">Winter Streaks</h1>
-            <p id="nav-links"></p>
+            <h1 id="page-title">Kui kaua võib?</h1>
+            <p>Nii külm olla.</p>
+            <p style="margin-top: 10px; color: #7f8c8d; font-size: 14px;">
+                Kasuta nooleklahve või slaiderit, et temperatuuri muuta ja vaata millal ning kui kaua on ilm sellest järjest külmem olnud.
+            </p>
+        </div>
+
+        <div class="controls-top">
+            <div class="slider-container">
+                <div class="slider-header">
+                    <label for="temp-threshold">Temperatuuri lävi:</label>
+                    <span class="temp-display" id="temp-display">0°C</span>
+                </div>
+                <input type="range" id="temp-threshold" min="-25" max="0" value="0" step="1">
+            </div>
+            
+            <div class="legend-top">
+                <div class="legend-item">
+                    <div class="legend-box long" style="background: #2e86c1;"></div>
+                    <span>> 7 päeva</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-box medium" style="background: #5dade2;"></div>
+                    <span>> 1 päev</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-box below-zero" style="background: #bdc3c7;"></div>
+                    <span>< 1 päev</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-box current-streak" style="background: #2ecc71; border: 1px solid #27ae60;"></div>
+                    <span>Käimasolev</span>
+                </div>
+            </div>
         </div>
 
         <div class="main-layout">
             <div class="visualization-area">
                 <div id="heatmap-content">
-                    <div class="loading">Loading data...</div>
+                    <div class="loading">Andmete laadimine...</div>
                 </div>
             </div>
             
             <div class="streaks-list-area">
-                <div class="controls">
-                    <div class="slider-container">
-                        <div class="slider-header">
-                            <label for="temp-threshold">Temperature Threshold:</label>
-                            <span class="temp-display" id="temp-display">0°C</span>
-                        </div>
-                        <input type="range" id="temp-threshold" min="-25" max="0" value="0" step="1">
-                        <div style="font-size: 11px; color: #95a5a6; margin-top: 4px; text-align: right;">
-                            Use arrow keys <kbd>←</kbd> <kbd>→</kbd> to adjust
-                        </div>
-                    </div>
-                </div>
-
-                <h3 style="margin-bottom: 15px; color: #2c3e50; font-size: 16px;">Top 10 Longest Streaks</h3>
+                <h3 style="margin-bottom: 15px; color: #2c3e50; font-size: 16px;">10 pikimat perioodi</h3>
                 <div id="streaks-list"></div>
-                
-                <div class="legend">
-                    <div class="legend-item">
-                        <div class="legend-box long" style="background: #2e86c1;"></div>
-                        <span>> 7 days</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-box medium" style="background: #5dade2;"></div>
-                        <span>> 1 day</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-box below-zero" style="background: #bdc3c7;"></div>
-                        <span>< 1 day</span>
-                    </div>
-                </div>
             </div>
+        </div>
+
+        <div class="footer-nav">
+            <p id="nav-links"></p>
         </div>
     </div>
 
@@ -281,18 +315,17 @@
         let cachedIntervalsData = {}; // threshold -> [{from, to}]
         let currentThreshold = 0;
 
-        document.getElementById('page-title').textContent = `${locationName} Winter Streaks`;
         document.getElementById('nav-links').innerHTML = `
             <div style="margin-bottom: 10px;">
-                <strong>Dataset:</strong>
+                <strong>Andmestik:</strong>
                 <a href="${isToravere ? 'streaks.html' : 'streaks.html'}" style="${!isToravere ? 'font-weight: bold; text-decoration: underline;' : ''}">Tartu</a> | 
                 <a href="${isToravere ? 'toravere-streaks.html' : 'toravere-streaks.html'}" style="${isToravere ? 'font-weight: bold; text-decoration: underline;' : ''}">Tõravere</a>
             </div>
             <div>
-                <strong>View:</strong>
-                <a href="${isToravere ? 'toravere.html' : 'index.html'}">Graph</a> | 
-                <a href="${isToravere ? 'toravere-heatmap.html' : 'heatmap.html'}">Heatmap</a> | 
-                <a href="${isToravere ? 'toravere-streaks.html' : 'streaks.html'}" style="font-weight: bold; text-decoration: underline;">Streaks</a>
+                <strong>Vaade:</strong>
+                <a href="${isToravere ? 'toravere.html' : 'index.html'}">Graafik</a> | 
+                <a href="${isToravere ? 'toravere-heatmap.html' : 'heatmap.html'}">Soojuskaart</a> | 
+                <a href="${isToravere ? 'toravere-streaks.html' : 'streaks.html'}" style="font-weight: bold; text-decoration: underline;">Perioodid</a>
             </div>
         `;
 
@@ -385,7 +418,7 @@
         function formatDuration(ms) {
             const days = Math.floor(ms / (24 * 60 * 60 * 1000));
             const hours = Math.floor((ms % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
-            return `${days}d ${hours}h`;
+            return `${days}p ${hours}h`;
         }
 
         function render(data) {
@@ -411,9 +444,9 @@
                     <div class="streak-num" style="background: ${circleColor}; color: white;">${i + 1}</div>
                     <div class="streak-info">
                         <div class="streak-dates">
-                            ${s.from.toLocaleDateString()} - ${s.to.toLocaleDateString()}
+                            ${s.from.toLocaleDateString('et-EE')} - ${s.to.toLocaleDateString('et-EE')}
                             <span class="streak-duration" style="margin-left: 8px; font-weight: normal;">
-                                (${formatDuration(s.durationMs)}${isOngoing ? ' ONGOING' : ''})
+                                (${formatDuration(s.durationMs)}${isOngoing ? ' KÄIMAS' : ''})
                             </span>
                         </div>
                     </div>
@@ -436,9 +469,9 @@
                     <div class="streak-num" style="background: #2ecc71; color: white;"></div>
                     <div class="streak-info">
                         <div class="streak-dates">
-                            ${s.from.toLocaleDateString()} - ${s.to.toLocaleDateString()}
+                            ${s.from.toLocaleDateString('et-EE')} - ${s.to.toLocaleDateString('et-EE')}
                             <span class="streak-duration" style="margin-left: 8px; font-weight: normal;">
-                                (${formatDuration(s.durationMs)} ONGOING)
+                                (${formatDuration(s.durationMs)} KÄIMAS)
                             </span>
                         </div>
                     </div>
@@ -618,9 +651,9 @@
 
             // 2. Draw month gridlines (Middle layer)
             const dividerMonths = [
-                { m: 11, y: 2021, label: 'Dec' }, { m: 0, y: 2022, label: 'Jan' }, 
-                { m: 1, y: 2022, label: 'Feb' }, { m: 2, y: 2022, label: 'Mar' }, 
-                { m: 3, y: 2022, label: 'Apr' }, { m: 4, y: 2022, label: 'May' }
+                { m: 11, y: 2021, label: 'Dets' }, { m: 0, y: 2022, label: 'Jaan' }, 
+                { m: 1, y: 2022, label: 'Veebr' }, { m: 2, y: 2022, label: 'Märts' }, 
+                { m: 3, y: 2022, label: 'Apr' }, { m: 4, y: 2022, label: 'Mai' }
             ];
 
             dividerMonths.forEach(dm => {

@@ -30,7 +30,7 @@
 
         .header {
             margin-bottom: 30px;
-            text-align: center;
+            text-align: left;
         }
 
         .header h1 {
@@ -186,11 +186,11 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Temperature Data Visualization</h1>
+            <h1>Temperatuuri andmete visualiseerimine</h1>
             <p id="nav-links"></p>
         </div>
         <div id="charts-container">
-            <div class="loading">Loading data...</div>
+            <div class="loading">Andmete laadimine...</div>
         </div>
     </div>
 
@@ -202,15 +202,15 @@
 
         document.getElementById('nav-links').innerHTML = `
             <div style="margin-bottom: 10px;">
-                <strong>Dataset:</strong>
+                <strong>Andmestik:</strong>
                 <a href="${isToravere ? 'index.html' : 'index.html'}" style="${!isToravere ? 'font-weight: bold; text-decoration: underline;' : ''}">Tartu</a> | 
                 <a href="${isToravere ? 'toravere.html' : 'toravere.html'}" style="${isToravere ? 'font-weight: bold; text-decoration: underline;' : ''}">Tõravere</a>
             </div>
             <div>
-                <strong>View:</strong>
-                <a href="${isToravere ? 'toravere.html' : 'index.html'}" style="font-weight: bold; text-decoration: underline;">Graph</a> | 
-                <a href="${isToravere ? 'toravere-heatmap.html' : 'heatmap.html'}">Heatmap</a> | 
-                <a href="${isToravere ? 'toravere-streaks.html' : 'streaks.html'}">Streaks</a>
+                <strong>Vaade:</strong>
+                <a href="${isToravere ? 'toravere.html' : 'index.html'}" style="font-weight: bold; text-decoration: underline;">Graafik</a> | 
+                <a href="${isToravere ? 'toravere-heatmap.html' : 'heatmap.html'}">Soojuskaart</a> | 
+                <a href="${isToravere ? 'toravere-streaks.html' : 'streaks.html'}">Perioodid</a>
             </div>
         `;
 
@@ -294,7 +294,7 @@
             const minutes = Math.floor((ms % (60 * 60 * 1000)) / (60 * 1000));
             
             let res = '';
-            if (days > 0) res += days + 'd ';
+            if (days > 0) res += days + 'p ';
             if (hours > 0) res += hours + 'h ';
             if (minutes > 0) res += minutes + 'm';
             return res.trim() || '0m';
@@ -440,7 +440,7 @@
             }
             
             // Create month ticks
-            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const monthNames = ['Jaan', 'Veebr', 'Märts', 'Apr', 'Mai', 'Juuni', 'Juuli', 'Aug', 'Sept', 'Okt', 'Nov', 'Dets'];
             function drawMonthTicks(h) {
                 const monthTicksGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
                 monthTicksGroup.setAttribute('class', 'month-ticks-group');
@@ -548,7 +548,7 @@
             statsText.setAttribute('class', 'chart-stats-text');
             statsText.setAttribute('text-anchor', 'end');
             statsText.setAttribute('dominant-baseline', 'middle');
-            statsText.textContent = `Avg: ${avgTemp.toFixed(1)}°C | Min: ${minYearTemp.toFixed(1)}°C | Max: ${maxYearTemp.toFixed(1)}°C`;
+            statsText.textContent = `Keskm: ${avgTemp.toFixed(1)}°C | Min: ${minYearTemp.toFixed(1)}°C | Max: ${maxYearTemp.toFixed(1)}°C`;
             svg.appendChild(statsText);
 
             // Hover interaction
@@ -686,8 +686,8 @@
                     const point = data[left];
 
                     if (point) {
-                        const timeStr = point.date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                        const dateStr = point.date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+                        const timeStr = point.date.toLocaleTimeString('et-EE', { hour: '2-digit', minute: '2-digit' });
+                        const dateStr = point.date.toLocaleDateString('et-EE', { month: 'short', day: 'numeric' });
                         const text = `${dateStr} ${timeStr}: ${point.temp.toFixed(1)}°C`;
                         tooltipText.textContent = text;
                         tooltipText.style.display = 'block';
@@ -721,7 +721,7 @@
         async function loadAndVisualize() {
             try {
                 document.getElementById('charts-container').innerHTML = 
-                    '<div class="loading">Loading data (this may take a moment for large files)...</div>';
+                    '<div class="loading">Andmete laadimine (suurte failide puhul võib see aega võtta)...</div>';
                 
                 const [csvResponse, streaksResponse] = await Promise.all([
                     fetch('./' + dataFile + '?t=' + new Date().getTime()),
@@ -732,7 +732,7 @@
                 streaksData = await streaksResponse.json();
                 
                 document.getElementById('charts-container').innerHTML = 
-                    '<div class="loading">Processing data...</div>';
+                    '<div class="loading">Andmete töötlemine...</div>';
                 
                 const { years: yearsData } = await parseCSV(text);
                 
@@ -752,7 +752,7 @@
                 
             } catch (error) {
                 document.getElementById('charts-container').innerHTML = 
-                    `<div class="loading" style="color: #e74c3c;">Error loading data: ${error.message}</div>`;
+                    `<div class="loading" style="color: #e74c3c;">Viga andmete laadimisel: ${error.message}</div>`;
                 console.error(error);
             }
         }

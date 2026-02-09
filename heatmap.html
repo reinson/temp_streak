@@ -22,7 +22,7 @@
         }
         .header {
             margin-bottom: 30px;
-            text-align: center;
+            text-align: left;
         }
         .header h1 { font-size: 32px; color: #2c3e50; margin-bottom: 10px; }
         .header p { color: #7f8c8d; font-size: 16px; }
@@ -123,12 +123,12 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Temperature Heatmap</h1>
+            <h1>Temperatuuri soojuskaart</h1>
             <p id="nav-links"></p>
         </div>
         
         <div id="main-content">
-            <div class="loading">Loading data...</div>
+            <div class="loading">Andmete laadimine...</div>
         </div>
 
         <div class="legend" id="heatmap-legend">
@@ -147,15 +147,15 @@
 
         document.getElementById('nav-links').innerHTML = `
             <div style="margin-bottom: 10px;">
-                <strong>Dataset:</strong>
+                <strong>Andmestik:</strong>
                 <a href="${isToravere ? 'heatmap.html' : 'heatmap.html'}" style="${!isToravere ? 'font-weight: bold; text-decoration: underline;' : ''}">Tartu</a> | 
                 <a href="${isToravere ? 'toravere-heatmap.html' : 'toravere-heatmap.html'}" style="${isToravere ? 'font-weight: bold; text-decoration: underline;' : ''}">Tõravere</a>
             </div>
             <div>
-                <strong>View:</strong>
-                <a href="${isToravere ? 'toravere.html' : 'index.html'}">Graph</a> | 
-                <a href="${isToravere ? 'toravere-heatmap.html' : 'heatmap.html'}" style="font-weight: bold; text-decoration: underline;">Heatmap</a> | 
-                <a href="${isToravere ? 'toravere-streaks.html' : 'streaks.html'}">Streaks</a>
+                <strong>Vaade:</strong>
+                <a href="${isToravere ? 'toravere.html' : 'index.html'}">Graafik</a> | 
+                <a href="${isToravere ? 'toravere-heatmap.html' : 'heatmap.html'}" style="font-weight: bold; text-decoration: underline;">Soojuskaart</a> | 
+                <a href="${isToravere ? 'toravere-streaks.html' : 'streaks.html'}">Perioodid</a>
             </div>
         `;
 
@@ -272,7 +272,7 @@
                         stripe.style.background = getColor(day.avg);
                         stripe.onmouseover = (e) => {
                             tooltip.style.display = 'block';
-                            tooltip.textContent = `${day.date.toLocaleDateString()}: ${day.avg.toFixed(1)}°C`;
+                            tooltip.textContent = `${day.date.toLocaleDateString('et-EE')}: ${day.avg.toFixed(1)}°C`;
                             tooltip.style.left = (e.pageX + 10) + 'px';
                             tooltip.style.top = (e.pageY + 10) + 'px';
                         };
@@ -306,7 +306,7 @@
             // Add months axis
             const monthsAxis = document.createElement('div');
             monthsAxis.className = 'months-axis';
-            ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].forEach(m => {
+            ['Jaan', 'Veebr', 'Märts', 'Apr', 'Mai', 'Juuni', 'Juuli', 'Aug', 'Sept', 'Okt', 'Nov', 'Dets'].forEach(m => {
                 const mLabel = document.createElement('div');
                 mLabel.className = 'month-label';
                 mLabel.textContent = m;
@@ -324,7 +324,7 @@
                 renderHeatmap(data);
             } catch (e) {
                 console.error(e);
-                document.getElementById('main-content').innerHTML = '<div class="loading">Error loading data.</div>';
+                document.getElementById('main-content').innerHTML = '<div class="loading">Viga andmete laadimisel.</div>';
             }
         }
 
