@@ -1,6 +1,12 @@
 const fs = require('fs');
 const readline = require('readline');
 
+// Keep local and CI runs deterministic by forcing one timezone baseline.
+const DEFAULT_TIMEZONE = 'Europe/Tallinn';
+if (!process.env.TZ) {
+    process.env.TZ = DEFAULT_TIMEZONE;
+}
+
 /**
  * Generates streak data for thresholds 0 to -25.
  * For each threshold, it finds the top 10 longest streaks and the current streak.
@@ -38,6 +44,18 @@ async function generateStreaks(inputPath, streaksOutputPath, intervalsOutputPath
     console.log(`  Intervals written to ${intervalsOutputPath}`);
 }
 
+function parseLocalTimestamp(dateStr) {
+    const [d, t] = dateStr.split(' ');
+    if (!d || !t) return null;
+
+    const [year, month, day] = d.split('-').map(Number);
+    const [hour, min, sec] = t.split(':').map(Number);
+    if ([year, month, day, hour, min, sec].some(Number.isNaN)) return null;
+
+    const date = new Date(year, month - 1, day, hour, min, sec);
+    return Number.isNaN(date.getTime()) ? null : date;
+}
+
 async function findStreaksForThreshold(filePath, threshold, intervalsStream) {
     const fileStream = fs.createReadStream(filePath);
     const rl = readline.createInterface({
@@ -60,8 +78,10 @@ async function findStreaksForThreshold(filePath, threshold, intervalsStream) {
         if (parts.length < 2) continue;
 
         const dateStr = parts[0];
-        const date = new Date(dateStr);
+        const date = parseLocalTimestamp(dateStr);
+        if (!date) continue;
         const temp = parseFloat(parts[3] || parts[1]);
+        if (Number.isNaN(temp)) continue;
         lastDataPoint = { date, temp };
 
         if (currentStreak && (date - currentStreak.end > 24 * 60 * 60 * 1000)) {

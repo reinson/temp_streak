@@ -2,6 +2,13 @@ const path = require('path');
 const fs = require('fs');
 const https = require('https');
 const readline = require('readline');
+
+// Keep local and CI runs deterministic by forcing one timezone baseline.
+const DEFAULT_TIMEZONE = 'Europe/Tallinn';
+if (!process.env.TZ) {
+    process.env.TZ = DEFAULT_TIMEZONE;
+}
+
 const { generateStreaks } = require('./generate_streaks');
 
 const baseDir = __dirname;
@@ -26,6 +33,21 @@ function formatDate(date) {
     const minutes = String(date.getMinutes()).padStart(2, '0');
     const seconds = String(date.getSeconds()).padStart(2, '0');
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
+/**
+ * Parses a "YYYY-MM-DD HH:mm:ss" string as local time in the configured TZ.
+ */
+function parseLocalTimestamp(dateStr) {
+    const [d, t] = dateStr.split(' ');
+    if (!d || !t) return null;
+
+    const [year, month, day] = d.split('-').map(Number);
+    const [hour, min, sec] = t.split(':').map(Number);
+    if ([year, month, day, hour, min, sec].some(Number.isNaN)) return null;
+
+    const date = new Date(year, month - 1, day, hour, min, sec);
+    return Number.isNaN(date.getTime()) ? null : date;
 }
 
 /**
@@ -71,19 +93,8 @@ async function compactData() {
         
         if (!dateStr || !tempStr) continue;
 
-        // Use a more robust date parsing for "YYYY-MM-DD HH:mm:ss"
-        let date;
-        if (dateStr.includes(' ')) {
-            const [d, t] = dateStr.split(' ');
-            const [year, month, day] = d.split('-').map(Number);
-            const [hour, min, sec] = t.split(':').map(Number);
-            // Construct as local time
-            date = new Date(year, month - 1, day, hour, min, sec);
-        } else {
-            date = new Date(dateStr);
-        }
-
-        if (isNaN(date.getTime())) continue;
+        const date = parseLocalTimestamp(dateStr);
+        if (!date) continue;
         const temp = parseFloat(tempStr);
         if (isNaN(temp)) continue;
 
@@ -182,7 +193,7 @@ async function getLatestDateInFile() {
 
     if (!lastLine) return null;
     const dateStr = lastLine.split(', ')[0];
-    return new Date(dateStr);
+    return parseLocalTimestamp(dateStr);
 }
 
 async function refreshData() {

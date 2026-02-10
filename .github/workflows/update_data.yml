@@ -2,12 +2,14 @@ name: Update Weather Data
 
 on:
   schedule:
-    - cron: '0 23 * * *' # Every day at 01:00 Estonian time (UTC+2) / 02:00 (UTC+3)
+    - cron: '0 4 * * *' # Every day at 06:00 Estonian winter time (UTC+2) / 07:00 summer time (UTC+3)
   workflow_dispatch: # Manual trigger
 
 jobs:
   update:
     runs-on: ubuntu-latest
+    env:
+      TZ: Europe/Tallinn
     permissions:
       contents: write
     steps:
