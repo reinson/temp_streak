@@ -56,6 +56,10 @@ function parseLocalTimestamp(dateStr) {
     return Number.isNaN(date.getTime()) ? null : date;
 }
 
+function isMay(date) {
+    return date.getMonth() === 4;
+}
+
 async function findStreaksForThreshold(filePath, threshold, intervalsStream) {
     const fileStream = fs.createReadStream(filePath);
     const rl = readline.createInterface({
@@ -80,6 +84,7 @@ async function findStreaksForThreshold(filePath, threshold, intervalsStream) {
         const dateStr = parts[0];
         const date = parseLocalTimestamp(dateStr);
         if (!date) continue;
+        if (isMay(date)) continue;
         const temp = parseFloat(parts[3] || parts[1]);
         if (Number.isNaN(temp)) continue;
         lastDataPoint = { date, temp };

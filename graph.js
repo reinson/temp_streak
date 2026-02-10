@@ -24,6 +24,9 @@ async function parseCSV(text) {
                     
                     if (!isNaN(temp)) {
                         const date = new Date(dateStr);
+                        const month = date.getMonth();
+                        if (month > 3) continue;
+
                         const year = date.getFullYear();
                         
                         if (!years[year]) years[year] = [];
@@ -120,7 +123,7 @@ function createYearChart(year, data) {
     const fixedMaxTemp = 35;
     
     const yearStart = new Date(year, 0, 1);
-    const yearEnd = new Date(year, 11, 31, 23, 59, 59);
+    const yearEnd = new Date(year, 3, 30, 23, 59, 59);
     const yearDuration = yearEnd - yearStart;
     
     const xScale = (date) => {
@@ -133,7 +136,7 @@ function createYearChart(year, data) {
     // Draw streaks for closed state
     getTopStreaks().forEach(streak => {
         const streakYearStart = new Date(year, 0, 1);
-        const streakYearEnd = new Date(year, 11, 31, 23, 59, 59);
+        const streakYearEnd = new Date(year, 3, 30, 23, 59, 59);
         if (streak.to >= streakYearStart && streak.from <= streakYearEnd) {
             const streakStart = Math.max(streak.from, streakYearStart);
             const streakEnd = Math.min(streak.to, streakYearEnd);
@@ -192,11 +195,11 @@ function createYearChart(year, data) {
     }
     
     // Month ticks
-    const monthNames = ['Jaan', 'Veebr', 'Märts', 'Apr', 'Mai', 'Juuni', 'Juuli', 'Aug', 'Sept', 'Okt', 'Nov', 'Dets'];
+    const monthNames = ['Jaan', 'Veebr', 'Märts', 'Apr'];
     function drawMonthTicks(h) {
         const monthTicksGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         monthTicksGroup.setAttribute('class', 'month-ticks-group');
-        for (let month = 0; month < 12; month++) {
+        for (let month = 0; month < 4; month++) {
             const monthDate = new Date(year, month, 1);
             const x = xScale(monthDate);
             
@@ -312,7 +315,7 @@ function createYearChart(year, data) {
         
         getTopStreaks().forEach(streak => {
             const sYearStart = new Date(year, 0, 1);
-            const sYearEnd = new Date(year, 11, 31, 23, 59, 59);
+            const sYearEnd = new Date(year, 3, 30, 23, 59, 59);
             if (streak.to >= sYearStart && streak.from <= sYearEnd) {
                 const streakStart = Math.max(streak.from, sYearStart);
                 const streakEnd = Math.min(streak.to, sYearEnd);
@@ -368,7 +371,7 @@ function createYearChart(year, data) {
         
         getTopStreaks().forEach(streak => {
             const sYearStart = new Date(year, 0, 1);
-            const sYearEnd = new Date(year, 11, 31, 23, 59, 59);
+            const sYearEnd = new Date(year, 3, 30, 23, 59, 59);
             if (streak.to >= sYearStart && streak.from <= sYearEnd) {
                 const streakStart = Math.max(streak.from, sYearStart);
                 const streakEnd = Math.min(streak.to, sYearEnd);

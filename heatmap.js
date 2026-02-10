@@ -48,6 +48,7 @@ async function parseHeatmapData(text) {
         const temp = parseFloat(parts[3] || parts[1]);
         
         if (isNaN(temp)) continue;
+        if (date.getMonth() > 3) continue;
         
         const year = date.getFullYear();
         const dayKey = date.toISOString().split('T')[0];
@@ -63,7 +64,7 @@ async function parseHeatmapData(text) {
     const result = {};
     for (const year in years) {
         result[year] = [];
-        for (let month = 0; month < 12; month++) {
+        for (let month = 0; month < 4; month++) {
             for (let day = 1; day <= 31; day++) {
                 const d = new Date(year, month, day);
                 if (d.getMonth() !== month) continue;
@@ -124,7 +125,7 @@ function renderHeatmap(yearsData) {
 
         // Add month dividers
         let dayOffset = 0;
-        for (let month = 0; month < 11; month++) {
+        for (let month = 0; month < 3; month++) {
             const daysInMonth = new Date(year, month + 1, 0).getDate();
             dayOffset += daysInMonth;
             const percent = (dayOffset / yearsData[year].length) * 100;
@@ -143,7 +144,7 @@ function renderHeatmap(yearsData) {
     // Add months axis
     const monthsAxis = document.createElement('div');
     monthsAxis.className = 'months-axis';
-    ['Jaan', 'Veebr', 'Märts', 'Apr', 'Mai', 'Juuni', 'Juuli', 'Aug', 'Sept', 'Okt', 'Nov', 'Dets'].forEach(m => {
+    ['Jaan', 'Veebr', 'Märts', 'Apr'].forEach(m => {
         const mLabel = document.createElement('div');
         mLabel.className = 'month-label';
         mLabel.textContent = m;

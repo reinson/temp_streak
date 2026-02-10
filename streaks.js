@@ -146,7 +146,7 @@ function renderStreaks(data) {
     container.appendChild(svg);
 
     const templateStart = new Date(2021, 9, 1, 0, 0, 0);
-    const templateEnd = new Date(2022, 4, 15, 23, 59, 59);
+    const templateEnd = new Date(2022, 3, 30, 23, 59, 59);
     const templateDuration = templateEnd - templateStart;
 
     sortedWinterKeys.forEach((key, rowIndex) => {
@@ -284,8 +284,7 @@ function renderStreaks(data) {
     const dividerMonths = [
         { m: 10, y: 2021, label: 'Nov' }, { m: 11, y: 2021, label: 'Dets' }, 
         { m: 0, y: 2022, label: 'Jaan' }, { m: 1, y: 2022, label: 'Veebr' }, 
-        { m: 2, y: 2022, label: 'Märts' }, { m: 3, y: 2022, label: 'Apr' }, 
-        { m: 4, y: 2022, label: 'Mai' }
+        { m: 2, y: 2022, label: 'Märts' }, { m: 3, y: 2022, label: 'Apr' }
     ];
 
     dividerMonths.forEach(dm => {

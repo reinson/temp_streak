@@ -50,6 +50,43 @@ function parseLocalTimestamp(dateStr) {
     return Number.isNaN(date.getTime()) ? null : date;
 }
 
+function isMay(date) {
+    return date.getMonth() === 4;
+}
+
+/**
+ * Removes May rows from an existing compacted CSV file in-place.
+ */
+async function removeMayRowsFromCompactedFile(filePath) {
+    if (!fs.existsSync(filePath)) return;
+
+    const content = fs.readFileSync(filePath, 'utf8');
+    const lines = content.split('\n');
+    if (lines.length === 0) return;
+
+    const header = lines[0];
+    let removed = 0;
+    const kept = [header];
+
+    for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        const dateStr = line.split(',')[0].trim();
+        const date = parseLocalTimestamp(dateStr);
+        if (!date) continue;
+        if (isMay(date)) {
+            removed++;
+            continue;
+        }
+        kept.push(line);
+    }
+
+    if (removed > 0) {
+        fs.writeFileSync(filePath, kept.join('\n') + '\n');
+        console.log(`  Removed ${removed} May rows from ${path.basename(filePath)}.`);
+    }
+}
+
 /**
  * Compacts data from all_data.csv to compacted_data.csv
  */
@@ -116,8 +153,10 @@ async function compactData() {
         if (targetHourMarkDate.getTime() > currentHourMarkDate.getTime()) {
             // We've moved past the current hour mark. 
             // Write the completed hour's data.
-            outputStream.write(`${formatDate(currentHourMarkDate)}, ${minTemp.toFixed(1)}, ${maxTemp.toFixed(1)}, ${lastTemp.toFixed(1)}\n`);
-            hoursWritten++;
+            if (!isMay(currentHourMarkDate)) {
+                outputStream.write(`${formatDate(currentHourMarkDate)}, ${minTemp.toFixed(1)}, ${maxTemp.toFixed(1)}, ${lastTemp.toFixed(1)}\n`);
+                hoursWritten++;
+            }
 
             // If there's a gap of more than one hour, we just move to the next available hour mark.
             currentHourMarkDate = targetHourMarkDate;
@@ -137,7 +176,7 @@ async function compactData() {
         }
     }
 
-    if (currentHourMarkDate !== null) {
+    if (currentHourMarkDate !== null && !isMay(currentHourMarkDate)) {
         outputStream.write(`${formatDate(currentHourMarkDate)}, ${minTemp.toFixed(1)}, ${maxTemp.toFixed(1)}, ${lastTemp.toFixed(1)}\n`);
         hoursWritten++;
     }
@@ -265,6 +304,8 @@ async function refreshData() {
 
     console.log("Refresh complete.");
     await compactData();
+    await removeMayRowsFromCompactedFile(compactedFile);
+    await removeMayRowsFromCompactedFile(toravereRawFile);
     await generateStreaks(compactedFile, streaksFile, intervalsFile);
 
     // Tartu (Tõravere) data is not updating, so we only compute streaks if they don't exist (or --force)
