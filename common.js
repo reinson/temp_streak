@@ -15,12 +15,6 @@ function updateNavLinks(activeView) {
             <a href="${isStreaks ? 'index.html' : isGraph ? 'graph.html' : 'heatmap.html'}" style="${!isToravere ? 'font-weight: bold; text-decoration: underline;' : ''}">Tartu</a> | 
             <a href="${(isStreaks ? 'index.html' : isGraph ? 'graph.html' : 'heatmap.html') + loc}" style="${isToravere ? 'font-weight: bold; text-decoration: underline;' : ''}">Tõravere</a>
         </div>
-        <div>
-            <strong>Vaade:</strong>
-            <a href="graph.html${isToravere ? loc : ''}" style="${isGraph ? 'font-weight: bold; text-decoration: underline;' : ''}">Graafik</a> | 
-            <a href="heatmap.html${isToravere ? loc : ''}" style="${isHeatmap ? 'font-weight: bold; text-decoration: underline;' : ''}">Soojuskaart</a> | 
-            <a href="index.html${isToravere ? loc : ''}" style="${isStreaks ? 'font-weight: bold; text-decoration: underline;' : ''}">Perioodid</a>
-        </div>
     `;
 }
 
