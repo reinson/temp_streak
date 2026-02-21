@@ -9,8 +9,8 @@
       },
       {
         "start": "2025-12-29T08:00:00.000Z",
-        "end": "2026-02-19T22:00:00.000Z",
-        "durationMs": 4543200000,
+        "end": "2026-02-20T22:00:00.000Z",
+        "durationMs": 4629600000,
         "isOngoing": true
       },
       {
@@ -64,8 +64,8 @@
     ],
     "current": {
       "start": "2025-12-29T08:00:00.000Z",
-      "end": "2026-02-19T22:00:00.000Z",
-      "durationMs": 4543200000,
+      "end": "2026-02-20T22:00:00.000Z",
+      "durationMs": 4629600000,
       "isOngoing": true
     }
   },
@@ -79,8 +79,8 @@
       },
       {
         "start": "2026-01-03T19:00:00.000Z",
-        "end": "2026-02-19T22:00:00.000Z",
-        "durationMs": 4071600000,
+        "end": "2026-02-20T22:00:00.000Z",
+        "durationMs": 4158000000,
         "isOngoing": true
       },
       {
@@ -134,8 +134,8 @@
     ],
     "current": {
       "start": "2026-01-03T19:00:00.000Z",
-      "end": "2026-02-19T22:00:00.000Z",
-      "durationMs": 4071600000,
+      "end": "2026-02-20T22:00:00.000Z",
+      "durationMs": 4158000000,
       "isOngoing": true
     }
   },
@@ -143,8 +143,8 @@
     "top10": [
       {
         "start": "2026-01-04T05:00:00.000Z",
-        "end": "2026-02-19T22:00:00.000Z",
-        "durationMs": 4035600000,
+        "end": "2026-02-20T22:00:00.000Z",
+        "durationMs": 4122000000,
         "isOngoing": true
       },
       {
@@ -204,8 +204,8 @@
     ],
     "current": {
       "start": "2026-01-04T05:00:00.000Z",
-      "end": "2026-02-19T22:00:00.000Z",
-      "durationMs": 4035600000,
+      "end": "2026-02-20T22:00:00.000Z",
+      "durationMs": 4122000000,
       "isOngoing": true
     }
   },
@@ -213,8 +213,8 @@
     "top10": [
       {
         "start": "2026-01-04T12:00:00.000Z",
-        "end": "2026-02-19T22:00:00.000Z",
-        "durationMs": 4010400000,
+        "end": "2026-02-20T22:00:00.000Z",
+        "durationMs": 4096800000,
         "isOngoing": true
       },
       {
@@ -274,8 +274,8 @@
     ],
     "current": {
       "start": "2026-01-04T12:00:00.000Z",
-      "end": "2026-02-19T22:00:00.000Z",
-      "durationMs": 4010400000,
+      "end": "2026-02-20T22:00:00.000Z",
+      "durationMs": 4096800000,
       "isOngoing": true
     }
   },
@@ -283,9 +283,9 @@
     "top10": [
       {
         "start": "2026-01-04T17:00:00.000Z",
-        "end": "2026-02-19T22:00:00.000Z",
-        "durationMs": 3992400000,
-        "isOngoing": true
+        "end": "2026-02-20T15:00:00.000Z",
+        "durationMs": 4053600000,
+        "isOngoing": false
       },
       {
         "start": "2010-01-05T02:00:00.000Z",
@@ -342,12 +342,7 @@
         "isOngoing": false
       }
     ],
-    "current": {
-      "start": "2026-01-04T17:00:00.000Z",
-      "end": "2026-02-19T22:00:00.000Z",
-      "durationMs": 3992400000,
-      "isOngoing": true
-    }
+    "current": null
   },
   "-5": {
     "top10": [
@@ -412,12 +407,7 @@
         "isOngoing": false
       }
     ],
-    "current": {
-      "start": "2026-02-16T12:00:00.000Z",
-      "end": "2026-02-19T22:00:00.000Z",
-      "durationMs": 295200000,
-      "isOngoing": true
-    }
+    "current": null
   },
   "-6": {
     "top10": [
@@ -482,12 +472,7 @@
         "isOngoing": false
       }
     ],
-    "current": {
-      "start": "2026-02-16T17:00:00.000Z",
-      "end": "2026-02-19T22:00:00.000Z",
-      "durationMs": 277200000,
-      "isOngoing": true
-    }
+    "current": null
   },
   "-7": {
     "top10": [
@@ -552,12 +537,7 @@
         "isOngoing": false
       }
     ],
-    "current": {
-      "start": "2026-02-16T18:00:00.000Z",
-      "end": "2026-02-19T22:00:00.000Z",
-      "durationMs": 273600000,
-      "isOngoing": true
-    }
+    "current": null
   },
   "-8": {
     "top10": [
@@ -622,12 +602,7 @@
         "isOngoing": false
       }
     ],
-    "current": {
-      "start": "2026-02-17T14:00:00.000Z",
-      "end": "2026-02-19T22:00:00.000Z",
-      "durationMs": 201600000,
-      "isOngoing": true
-    }
+    "current": null
   },
   "-9": {
     "top10": [
@@ -692,12 +667,7 @@
         "isOngoing": false
       }
     ],
-    "current": {
-      "start": "2026-02-19T18:00:00.000Z",
-      "end": "2026-02-19T22:00:00.000Z",
-      "durationMs": 14400000,
-      "isOngoing": true
-    }
+    "current": null
   },
   "-10": {
     "top10": [
@@ -762,12 +732,7 @@
         "isOngoing": false
       }
     ],
-    "current": {
-      "start": "2026-02-19T19:00:00.000Z",
-      "end": "2026-02-19T22:00:00.000Z",
-      "durationMs": 10800000,
-      "isOngoing": true
-    }
+    "current": null
   },
   "-11": {
     "top10": [
@@ -832,12 +797,7 @@
         "isOngoing": false
       }
     ],
-    "current": {
-      "start": "2026-02-19T21:00:00.000Z",
-      "end": "2026-02-19T22:00:00.000Z",
-      "durationMs": 3600000,
-      "isOngoing": true
-    }
+    "current": null
   },
   "-12": {
     "top10": [
