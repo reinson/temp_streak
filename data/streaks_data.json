@@ -2,16 +2,16 @@
   "0": {
     "top10": [
       {
+        "start": "2025-12-29T08:00:00.000Z",
+        "end": "2026-02-23T22:00:00.000Z",
+        "durationMs": 4888800000,
+        "isOngoing": true
+      },
+      {
         "start": "2009-12-29T01:00:00.000Z",
         "end": "2010-02-23T14:00:00.000Z",
         "durationMs": 4885200000,
         "isOngoing": false
-      },
-      {
-        "start": "2025-12-29T08:00:00.000Z",
-        "end": "2026-02-22T22:00:00.000Z",
-        "durationMs": 4802400000,
-        "isOngoing": true
       },
       {
         "start": "2006-01-30T17:00:00.000Z",
@@ -64,8 +64,8 @@
     ],
     "current": {
       "start": "2025-12-29T08:00:00.000Z",
-      "end": "2026-02-22T22:00:00.000Z",
-      "durationMs": 4802400000,
+      "end": "2026-02-23T22:00:00.000Z",
+      "durationMs": 4888800000,
       "isOngoing": true
     }
   },
@@ -134,8 +134,8 @@
     ],
     "current": {
       "start": "2026-02-21T16:00:00.000Z",
-      "end": "2026-02-22T22:00:00.000Z",
-      "durationMs": 108000000,
+      "end": "2026-02-23T22:00:00.000Z",
+      "durationMs": 194400000,
       "isOngoing": true
     }
   },
@@ -204,8 +204,8 @@
     ],
     "current": {
       "start": "2026-02-22T16:00:00.000Z",
-      "end": "2026-02-22T22:00:00.000Z",
-      "durationMs": 21600000,
+      "end": "2026-02-23T22:00:00.000Z",
+      "durationMs": 108000000,
       "isOngoing": true
     }
   },
@@ -273,9 +273,9 @@
       }
     ],
     "current": {
-      "start": "2026-02-22T17:00:00.000Z",
-      "end": "2026-02-22T22:00:00.000Z",
-      "durationMs": 18000000,
+      "start": "2026-02-23T15:00:00.000Z",
+      "end": "2026-02-23T22:00:00.000Z",
+      "durationMs": 25200000,
       "isOngoing": true
     }
   },
@@ -342,12 +342,7 @@
         "isOngoing": false
       }
     ],
-    "current": {
-      "start": "2026-02-22T18:00:00.000Z",
-      "end": "2026-02-22T22:00:00.000Z",
-      "durationMs": 14400000,
-      "isOngoing": true
-    }
+    "current": null
   },
   "-5": {
     "top10": [
@@ -412,12 +407,7 @@
         "isOngoing": false
       }
     ],
-    "current": {
-      "start": "2026-02-22T19:00:00.000Z",
-      "end": "2026-02-22T22:00:00.000Z",
-      "durationMs": 10800000,
-      "isOngoing": true
-    }
+    "current": null
   },
   "-6": {
     "top10": [
@@ -482,12 +472,7 @@
         "isOngoing": false
       }
     ],
-    "current": {
-      "start": "2026-02-22T21:00:00.000Z",
-      "end": "2026-02-22T22:00:00.000Z",
-      "durationMs": 3600000,
-      "isOngoing": true
-    }
+    "current": null
   },
   "-7": {
     "top10": [
