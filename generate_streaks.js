@@ -85,7 +85,10 @@ async function findStreaksForThreshold(filePath, threshold, intervalsStream) {
         const date = parseLocalTimestamp(dateStr);
         if (!date) continue;
         if (isMay(date)) continue;
-        const temp = parseFloat(parts[3] || parts[1]);
+        // all_data.csv: Aeg, Temperatuur (2 cols) - use temp directly for immediate streak ending
+        // compacted_data.csv: Aeg, MinTemp, MaxTemp, HourTemp (4 cols) - use MaxTemp so streak ends
+        // immediately when ANY reading in that hour exceeded threshold (temp went over 0)
+        const temp = parts.length >= 4 ? parseFloat(parts[2]) : parseFloat(parts[1]);
         if (Number.isNaN(temp)) continue;
         lastDataPoint = { date, temp };
 
@@ -156,7 +159,7 @@ async function findStreaksForThreshold(filePath, threshold, intervalsStream) {
 }
 
 if (require.main === module) {
-    const inputPath = process.argv[2] || './data/compacted_data.csv';
+    const inputPath = process.argv[2] || './data/all_data.csv';
     const streaksOutputPath = process.argv[3] || './data/streaks_data.json';
     const intervalsOutputPath = process.argv[4] || './data/streaks_intervals.csv';
     generateStreaks(inputPath, streaksOutputPath, intervalsOutputPath).catch(err => {

@@ -306,7 +306,8 @@ async function refreshData() {
     await compactData();
     await removeMayRowsFromCompactedFile(compactedFile);
     await removeMayRowsFromCompactedFile(toravereRawFile);
-    await generateStreaks(compactedFile, streaksFile, intervalsFile);
+    // Tartu streaks from all_data.csv for immediate streak ending when temp goes over 0
+    await generateStreaks(outputFile, streaksFile, intervalsFile);
 
     // Tartu (Tõravere) data is not updating, so we only compute streaks if they don't exist (or --force)
     if (forceUpdate || !fs.existsSync(toravereIntervalsFile)) {
