@@ -62,12 +62,7 @@
         "isOngoing": false
       }
     ],
-    "current": {
-      "start": "2026-02-26T19:45:00.000Z",
-      "end": "2026-02-26T21:55:00.000Z",
-      "durationMs": 7800000,
-      "isOngoing": true
-    }
+    "current": null
   },
   "-1": {
     "top10": [
